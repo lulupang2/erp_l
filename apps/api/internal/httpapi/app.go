@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -78,14 +79,14 @@ func New(database *store.Store) *fiber.App {
 		if err != nil {
 			hostname = host
 		}
-		if !platform.Loopback(hostname) {
-			return domain.Input("로컬 호스트에서만 접근할 수 있습니다.")
+			if !platform.RequestHostAllowed(hostname, os.Getenv("PUBLIC_APP_HOST")) {
+				return domain.Input("허용된 애플리케이션 호스트에서만 접근할 수 있습니다.")
 		}
 		if c.Method() == "POST" || c.Method() == "PUT" {
 			if origin := c.Get("Origin"); origin != "" {
 				u, err := url.Parse(origin)
 				if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host != host || u.User != nil {
-					return domain.Input("동일한 로컬 출처의 요청만 허용합니다.")
+						return domain.Input("동일한 애플리케이션 출처의 요청만 허용합니다.")
 				}
 			}
 			if c.Get("Sec-Fetch-Site") == "cross-site" {

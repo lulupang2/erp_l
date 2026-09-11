@@ -234,3 +234,13 @@ API·DB·접속 프로필과 멱등성 로직은 변경하지 않았다. 변경 
 사용자가 LINE Seed KR 적용 후 `a.button` 텍스트가 버튼 안에서 시각적으로 약간 위로 떠 보이는 점을 지적했다. 일반 버튼 박스의 44px 최소 높이와 flex 중앙 정렬은 유지하고, 링크형 버튼에만 상단 2px/하단 0px 패딩을 적용해 실제 콘텐츠 중심을 약 1px 아래로 보정했다. 아이콘이 있는 링크형 버튼도 같은 콘텐츠 박스 기준으로 함께 이동하며, compact 버튼은 기존 크기 규칙을 유지한다.
 
 타이포그래피 브라우저 검증에 `목록으로` 링크형 버튼의 `inline-flex`, `align-items:center`, 2px 상단 보정 회귀 검사를 추가했다. 백엔드/API/DB 로직은 변경하지 않았다. 집중 검증 결과는 아래 후속 실행 결과로 갱신한다.
+
+### Rocky Linux 배포 문서화 (2026-09-11, 실제 배포 미완료)
+
+사용자가 보유 Rocky Linux 서버와 `erp.jisung.lol` 도메인으로 후속 포트폴리오 배포를 진행하기로 했다. 사용자는 GitHub 저장소/remote, 기존 `deploy` 사용자, Docker 설치와 GitHub Actions repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` 등록까지 완료했다고 확인했다.
+
+배포 기준은 `docs/DEPLOYMENT.md`에 정리했다. 목표 구성은 GitHub Actions CI → commit SHA 기반 API/Web image → GHCR → SSH → Rocky Linux Docker Compose → Caddy TLS/Basic Auth → loopback SvelteKit/Go API → Neon이다. 서버 비밀번호는 CI/CD에 사용하지 않고 SSH key를 사용한다. production DB 비밀값은 GitHub workflow나 저장소에 넣지 않고 서버의 `.env.production`에만 둔다.
+
+이번 문서 작업에서는 실제 서버 SSH 접속, DNS 변경, 방화벽 변경, GHCR push, production migration, Caddy 기동 또는 `erp.jisung.lol` 외부 확인을 수행하지 않았다. 따라서 **production 배포 상태는 아직 미완료**이며, CI/CD와 서버 배포를 실제 실행한 세션에서 TLS, 인증 없는 401, Basic Auth 후 200, 내부 health, migration과 컨테이너 상태를 검증한 뒤 완료로 갱신해야 한다.
+
+배포 문서는 준비 완료/미완료를 구분하는 체크리스트와 장애 확인 순서, commit SHA 롤백 원칙을 포함한다. 자동 배포에서는 seed/reset/migration down을 실행하지 않으며, 앱 자체 사용자 인증이 없는 동안 Caddy Basic Auth를 제거하지 않는 것을 운영 기준으로 한다.

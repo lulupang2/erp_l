@@ -1,0 +1,64 @@
+name: assembly-erp-prod
+
+# Rocky Linux deployment intentionally uses host networking. The API and web
+# processes still bind only to loopback; Caddy is the only public listener.
+services:
+  migrate:
+    image: "${API_IMAGE:?Set API_IMAGE in .release.env}:${IMAGE_TAG:?Set IMAGE_TAG in .release.env}"
+    network_mode: host
+    profiles: ["tools"]
+    environment:
+      MIGRATION_DATABASE_URL: "${MIGRATION_DATABASE_URL:?Set MIGRATION_DATABASE_URL in .env.production}"
+    entrypoint: ["/app/erp-migrate", "up"]
+    restart: "no"
+
+  api:
+    image: "${API_IMAGE:?Set API_IMAGE in .release.env}:${IMAGE_TAG:?Set IMAGE_TAG in .release.env}"
+    network_mode: host
+    environment:
+      DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL in .env.production}"
+      API_ADDR: "127.0.0.1:8080"
+      PUBLIC_APP_HOST: "${PUBLIC_APP_HOST:?Set PUBLIC_APP_HOST in .env.production}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+
+  web:
+    image: "${WEB_IMAGE:?Set WEB_IMAGE in .release.env}:${IMAGE_TAG:?Set IMAGE_TAG in .release.env}"
+    network_mode: host
+    environment:
+      HOST: "127.0.0.1"
+      PORT: "3000"
+      NODE_ENV: "production"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/items').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    network_mode: host
+    environment:
+      BASIC_AUTH_USER: "${BASIC_AUTH_USER:?Set BASIC_AUTH_USER in .env.production}"
+      BASIC_AUTH_HASH: "${BASIC_AUTH_HASH:?Set BASIC_AUTH_HASH in .env.production}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

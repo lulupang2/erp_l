@@ -1,6 +1,6 @@
 # 조립 제조 ERP — 문서 기준과 상세 설계
 
-문서 버전: 0.5  
+문서 버전: 0.6  
 작성일: 2026-09-11  
 상태: MVP 설계 기준 / 구현 진행 중. 실제 구현·검증 상태는 [PROGRESS](PROGRESS.md)를 따른다.
 
@@ -21,7 +21,7 @@ SSOT는 한 파일에 모든 내용을 모으는 대신, 각 항목에 하나의
 - **사용자 확정 사항:** Go Fiber, SvelteKit, Neon, sqlc + pgx, 모노레포, 모듈형 모놀리스, 조립 제조, 최소 MVP, 로그인 없는 로컬 데모, 부분 생산·불량 지원.
 - **사용자 확정 업무 규칙:** 계획은 양품+불량 처리 목표이며, 실적 등록 시 양품+불량의 자재를 차감하고 양품만 입고한다.
 - **설계 기본값:** 별도 사용자 지정이 없는 API 형식, 수량 상한, 상태명, 테이블 구성 등은 이 문서가 정한 MVP 기본값이다. 사용자 요구가 바뀌면 구현 전에 함께 수정한다.
-- 최초 문서 작성 요청 이후 2026-09-11 후속 요청으로 코드 구현을 시작했다. 로컬 PostgreSQL 구현·검증 후 사용자가 별도로 승인한 `assembly-erp` Neon 프로젝트를 생성했다. 공개 배포는 진행하지 않으며 실제 검증 상태는 PROGRESS를 따른다.
+- 최초 문서 작성 요청 이후 2026-09-11 후속 요청으로 코드 구현을 시작했다. 로컬 PostgreSQL 구현·검증 후 사용자가 별도로 승인한 `assembly-erp` Neon 프로젝트를 생성했다. 이후 사용자가 보유 Rocky Linux와 `erp.jisung.lol`로 보호된 포트폴리오 배포를 요청했다. 실제 검증 상태는 PROGRESS를 따른다.
 - 후속 OpenAPI 문서는 본 문서의 계약을 구체화한다. 불일치가 발견되면 문서와 구현을 같은 작업에서 일치시킨다.
 
 ## 2. 목표와 범위
@@ -148,7 +148,7 @@ UUID를 리소스 식별자로 사용한다. 아래는 책임과 관계의 기�
 
 ## 7. API 계약
 
-REST JSON API의 기본 경로는 `/api/v1`이다. 인증은 없으며 로컬 접근만 지원한다.
+REST JSON API의 기본 경로는 `/api/v1`이다. 애플리케이션 자체 인증은 없다. 기본 실행은 loopback 접근만 허용하며, production은 loopback에 바인딩된 API 앞의 Caddy 인증 프록시와 정확히 지정한 공개 Host만 지원한다.
 
 | 메서드 / 경로 | 입력 또는 동작 |
 | --- | --- |
@@ -217,8 +217,12 @@ sqlc 생성 모델을 API 응답으로 직접 노출하지 않는다. 생성 코
 - 초기 풀은 MaxConns=5, MinConns=0, 연결 타임아웃=15초를 기본으로 한다. DB 작업 컨텍스트에는 20초 제한을 둔다.
 - 컴퓨트 재개 이후 요청과 연결 실패 복구를 검증한다. DB를 깨우기 위한 주기적 쿼리는 추가하지 않는다.
 - 서버 인스턴스 증가 시 Neon 풀러 도입과 prepared statement 호환성을 별도 검증한다.
-- 브라우저 요청은 같은 출처의 `/api`로 전달하고 개발 프록시로 로컬 Fiber에 연결한다.
-- 공개 배포는 하지 않는다. Docker 공개 포트는 loopback에 바인딩한다.
+- 브라우저 요청은 같은 출처의 `/api`로 전달한다. 개발에서는 Vite proxy, production에서는 Caddy가 로컬 Fiber에 연결한다.
+- production SvelteKit은 `adapter-node`를 사용하고 `127.0.0.1:3000`, Fiber는 `127.0.0.1:8080`에 바인딩한다. Rocky Linux Docker Compose는 host network를 사용하되 Caddy만 80/443을 공개한다.
+- Caddy는 `erp.jisung.lol`의 TLS와 Basic Auth를 담당한다. 앱 사용자 계정이 생기기 전에는 Basic Auth 없이 production을 시작하지 않는다.
+- API Host 검사는 loopback을 기본 허용하고 `PUBLIC_APP_HOST`로 지정한 정확한 DNS 호스트 하나만 추가 허용한다. 쓰기 요청 Origin은 실제 Host와 동일해야 하며 cross-site 쓰기는 계속 거절한다.
+- CI는 Neon 비밀값 없이 격리 로컬 PostgreSQL에서 기존 검증을 수행한다. main CI 성공 후 CD가 commit SHA Docker image를 GHCR에 올리고 SSH로 Rocky Linux에 배포한다.
+- 배포 migration은 `up` one-shot으로 한 번만 실행하고 자동 seed/reset/down은 수행하지 않는다. DB/Auth 비밀값은 서버의 `.env.production`에만 둔다.
 - 로컬 테스트 DB는 Neon과 분리한다. 데모 초기화 명령은 명시적으로 지정한 전용 데모 DB에만 적용하며 서버 시작 시 자동 실행하지 않는다.
 
 ### 리소스와 버전
@@ -276,3 +280,4 @@ MVP 완료 판단은 [PRD 10절](PRD.md#10-mvp-완료-조건)을 기준으로 �
 | 0.3 | 2026-09-11 | ADR 7건과 문서 연결. 기존 기술 결정의 배경과 대안 기록. |
 | 0.4 | 2026-09-11 | 구현 시작 요청과 PROGRESS 연결. Neon 없이 로컬 PostgreSQL 구현·검증 진행, 실제 Neon 검증은 별도 유지. |
 | 0.5 | 2026-09-11 | 후속 승인에 따른 ERP 전용 Neon 생성, 별도 연결 프로필과 로컬 테스트 격리 유지. 실제 검증 결과는 PROGRESS에서 관리. |
+| 0.6 | 2026-09-11 | 사용자 요청으로 Rocky Linux + Caddy + GHCR + GitHub Actions 배포 설계 추가. API/Web loopback 유지, proxy Basic Auth와 정확한 공개 Host 허용 규칙 정의. |

@@ -76,7 +76,8 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator('#name')).toHaveCSS('font-size', '15px');
         await expect(page.locator('label[for="name"]')).toHaveCSS('font-size', '14px');
         const backButton = page.getByRole('link', { name: '목록으로', exact: true });
-        await expect(backButton).toHaveCSS('display', 'inline-flex');
+        // Chromium serializes the computed value of legacy inline-flex as flex.
+        await expect(backButton).toHaveCSS('display', 'flex');
         await expect(backButton).toHaveCSS('align-items', 'center');
         await expect(backButton).toHaveCSS('padding-top', '2px');
       } else {

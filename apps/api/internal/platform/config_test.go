@@ -48,6 +48,24 @@ func TestUnsafeConfigurationRejected(t *testing.T) {
 	}
 }
 
+func TestRequestHostAllowed(t *testing.T) {
+	for _, host := range []string{"localhost", "127.0.0.1", "::1", "ERP.JISUNG.LOL", "erp.jisung.lol."} {
+		if !RequestHostAllowed(host, "erp.jisung.lol") {
+			t.Fatalf("expected host %q to be allowed", host)
+		}
+	}
+	for _, host := range []string{"example.com", "erp.jisung.lol.evil.example", "10.0.0.2"} {
+		if RequestHostAllowed(host, "erp.jisung.lol") {
+			t.Fatalf("unexpected host %q allowed", host)
+		}
+	}
+	for _, configured := range []string{"", "https://erp.jisung.lol", "erp.jisung.lol:443", "127.0.0.1"} {
+		if RequestHostAllowed("erp.jisung.lol", configured) {
+			t.Fatalf("invalid public host %q accepted", configured)
+		}
+	}
+}
+
 func TestDestructiveTargetGuard(t *testing.T) {
 	if err := RequireLocalDatabase("postgres://erp@127.0.0.1:55432/erp_demo?sslmode=disable", "erp_demo", "55432"); err != nil {
 		t.Fatal(err)

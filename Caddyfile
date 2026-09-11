@@ -1,0 +1,26 @@
+erp.jisung.lol {
+	encode zstd gzip
+
+	# The application itself has no accounts. Keep the public deployment closed
+	# behind reverse-proxy authentication until product authentication is added.
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	@api path /api/*
+	handle @api {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}

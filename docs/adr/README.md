@@ -17,6 +17,7 @@ ADR은 해당 설계를 선택한 배경, 대안, 감수하는 단점과 재검�
 | [0005](0005-neon-postgresql.md) | Neon과 별도 로컬 테스트 DB | 채택 | Neon은 사용자 확정, 연결·테스트 구성은 설계 기본값 |
 | [0006](0006-transaction-consistency.md) | 트랜잭션·행 잠금·중복 요청 방지 | 채택 | PRD NFR-01~03을 위한 기존 설계 기본값 |
 | [0007](0007-bom-snapshot.md) | 생산 지시별 BOM 복사본 | 채택 | PRD BR-07을 위한 기존 설계 기본값 |
+| [0008](0008-rocky-linux-cicd.md) | Rocky Linux Docker Compose와 GitHub Actions CI/CD | 채택 | 사용자 후속 배포 요청, 보유 서버·도메인 활용 |
 
 ## 기록 원칙
 

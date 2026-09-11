@@ -1,0 +1,133 @@
+name: Deploy production
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tested commit SHA or tag to deploy/roll back to
+        required: true
+        default: main
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+    steps:
+      - name: Checkout verified commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.workflow_run.head_sha }}
+
+      - name: Compute image names
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_base="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "IMAGE_BASE=$image_base" >> "$GITHUB_ENV"
+          echo "DEPLOY_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/api
+          file: ./apps/api/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_BASE }}-api:${{ env.DEPLOY_SHA }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/web/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_BASE }}-web:${{ env.DEPLOY_SHA }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Prepare SSH and release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          test -n "$DEPLOY_SSH_KEY"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          printf 'API_IMAGE=%s-api\nWEB_IMAGE=%s-web\nIMAGE_TAG=%s\n' \
+            "$IMAGE_BASE" "$IMAGE_BASE" "$DEPLOY_SHA" > .release.env
+
+      - name: Upload deployment definition
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p ~/assembly-erp'
+          scp -i ~/.ssh/deploy_key compose.prod.yml Caddyfile .release.env \
+            "$DEPLOY_USER@$DEPLOY_HOST:~/assembly-erp/"
+
+      - name: Pull, migrate and restart
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
+            "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" <<'REMOTE'
+          set -euo pipefail
+          cd ~/assembly-erp
+          if [ ! -f .env.production ]; then
+            echo 'Missing ~/assembly-erp/.env.production. See docs/DEPLOYMENT.md.' >&2
+            exit 2
+          fi
+          dc='docker compose --env-file .env.production --env-file .release.env -f compose.prod.yml'
+          $dc pull api web caddy
+          $dc run --rm migrate
+          $dc up -d --remove-orphans api web caddy
+          $dc exec -T api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health >/dev/null
+          $dc exec -T web node -e "fetch('http://127.0.0.1:3000/items').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+          $dc ps
+          docker logout ghcr.io >/dev/null 2>&1 || true
+          REMOTE
+
+      - name: Verify public TLS and auth gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --retry 8 --retry-delay 3 --retry-all-errors https://erp.jisung.lol/)"
+          test "$status" = "401"

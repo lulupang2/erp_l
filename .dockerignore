@@ -1,0 +1,16 @@
+.git
+.github
+.local
+.tools
+.env
+.env.*
+node_modules
+**/node_modules
+**/.svelte-kit
+**/build
+test-results
+playwright-report
+coverage
+*.log
+*.exe
+

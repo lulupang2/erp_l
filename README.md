@@ -1,7 +1,7 @@
 # 조립 제조 ERP
 
 SvelteKit과 Go Fiber로 구현한 조립 제조 ERP 포트폴리오입니다. **품목 → BOM → 부품 입고 → 생산 지시 → 부분 생산·불량 → 재고 이력**을 연결합니다.
-로그인 없는 단일 조직·단일 재고 위치의 **로컬 데모**이며 공개 배포는 지원하지 않습니다.
+제품 내부 로그인은 없는 단일 조직·단일 재고 위치 데모입니다. 로컬/Neon 검증은 완료했고, 후속 요청으로 `erp.jisung.lol` Rocky Linux 포트폴리오 배포와 CI/CD를 준비하고 있습니다. 공개 환경은 Caddy Basic Auth 앞에서만 운영하는 것을 기준으로 합니다.
 
 현재 구현·검증 결과와 남은 작업은 **[PROGRESS](docs/PROGRESS.md)**에서 관리합니다. 로컬 PostgreSQL MVP 검증에 이어 승인된 ERP 전용 Neon에서 실제 TLS 연결·마이그레이션·브라우저 생산 흐름·유휴 재개를 검증했습니다. 자동 명령 실행과 수동 제어 인계 범위는 진행 기록에 구분합니다.
 
@@ -17,13 +17,14 @@ SvelteKit과 Go Fiber로 구현한 조립 제조 ERP 포트폴리오입니다. *
 | [데모 절차](docs/DEMO.md) | 키보드 조립 및 실패 시나리오 시연 |
 | [프론트 디자인](docs/UI-DESIGN.md) | NASEEJ 참고 방향, 라이트/다크 테마와 화면 동작 |
 | [Neon 체크리스트](docs/NEON-CHECKLIST.md) | 실제 Neon 연결·업무 흐름·유휴 재개 검증 |
+| [Rocky Linux 배포](docs/DEPLOYMENT.md) | GitHub Actions CI/CD, GHCR, Docker Compose, Caddy/TLS와 서버 준비 |
 
 ## 실행 환경과 고정 버전
 
 | 구성 | 버전 |
 | --- | --- |
 | Node.js / pnpm | 26.8.2 / 10.11.0 |
-| Svelte / SvelteKit / TypeScript | 5.57.0 / 2.70.3 / 6.0.3 |
+| Svelte / SvelteKit / TypeScript | 5.57.0 / 2.70.3 / 6.0.3 (`adapter-node` 5.5.7 production) |
 | Vite | 8.3.0 |
 | Go / Fiber | 1.26.7 / 3.5.0 |
 | pgx / sqlc / Goose | 5.11.0 / 1.31.1 / 3.28.0 |
@@ -181,4 +182,10 @@ Neon 실행에는 DB 컨테이너가 필요하지 않습니다. 화면은 동일
 `pnpm neon:verify`는 실제 클라우드 데모 데이터를 추가하고 운영자가 유휴 상태를 확인하는 별도 검증입니다. 일상적인 로컬 테스트에 포함하지 않으며, 사용법과 결과 위치는 체크리스트를 참조하세요. 원격 데모 초기화는 구현하지 않았습니다.
 외부 PostgreSQL에는 `sslmode=verify-full`을 요구하고 연결 풀은 MaxConns 5 / MinConns 0, 연결 제한 15초 / DB 작업 제한 20초입니다. 로컬 테스트 결과를 실제 Neon TLS·유휴 재개·복구 검증으로 간주하지 않습니다.
 
-이 프로젝트는 인증·권한·다중 창고·재고 조정·원가·판매·구매·공개 배포를 포함하지 않습니다. 로컬 접근 제한은 인증을 대신하는 운영 보안 설계가 아니므로 인터넷에 노출하지 않습니다.
+## Rocky Linux production 배포
+
+후속 요청으로 `erp.jisung.lol` 배포 설계와 절차를 추가했습니다. 목표 production 구성은 `adapter-node` Web과 Go API를 Docker로 실행하고 둘 다 loopback에만 바인딩하며, Caddy만 80/443을 수신하는 방식입니다. `main` CI가 성공한 commit만 SHA 이미지로 배포하도록 구성합니다.
+
+실제 서버 준비, DNS, `.env.production`, GitHub secrets, 배포 확인과 롤백은 [DEPLOYMENT](docs/DEPLOYMENT.md)를 따릅니다. 문서가 존재한다는 사실만으로 production 배포 완료로 간주하지 않으며 실제 완료 상태는 [PROGRESS](docs/PROGRESS.md)에 기록합니다. 앱 자체 사용자 인증은 여전히 범위 밖이므로 Caddy Basic Auth를 제거한 채 인터넷에 공개하지 않습니다.
+
+이 프로젝트는 애플리케이션 사용자 계정·권한, 다중 창고·재고 조정·원가·판매·구매를 포함하지 않습니다. production reverse proxy 인증은 제품 사용자/권한 모델의 대체가 아니라 포트폴리오 배포 보호 장치입니다.

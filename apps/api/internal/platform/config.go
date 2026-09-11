@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,6 +16,20 @@ const OperationTimeout = 20 * time.Second
 
 func Loopback(host string) bool {
 	return host == "localhost" || net.ParseIP(host) != nil && net.ParseIP(host).IsLoopback()
+}
+
+// RequestHostAllowed keeps HTTP access loopback-only by default while allowing
+// one explicit public DNS host when a trusted local reverse proxy preserves Host.
+func RequestHostAllowed(host, publicHost string) bool {
+	host = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
+	publicHost = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(publicHost)), ".")
+	if Loopback(host) {
+		return true
+	}
+	if publicHost == "" || strings.ContainsAny(publicHost, "/:@[]") || net.ParseIP(publicHost) != nil {
+		return false
+	}
+	return host == publicHost
 }
 
 // ValidateURL rejects options that can silently override the visible host/database.

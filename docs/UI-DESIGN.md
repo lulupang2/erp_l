@@ -63,8 +63,9 @@ Regular/Bold만 로드하며 Thin이나 존재하지 않는 500/600/650 등의 �
 
 ## 구현 범위와 검증
 
-업무 API·DB 스키마·수량 정책·멱등성 코드는 변경하지 않는다. 로그인, 공개 배포,
-가상 매출 그래프나 대시보드 등의 기능도 추가하지 않는다.
+업무 API·DB 스키마·수량 정책·멱등성 코드는 디자인 작업에서 변경하지 않았다. 애플리케이션 로그인,
+가상 매출 그래프나 대시보드 등의 기능도 추가하지 않는다. 후속 Rocky Linux 공개 배포는 UI 기능이 아니라
+Caddy Basic Auth로 보호하는 별도 운영 범위이며 [DEPLOYMENT](DEPLOYMENT.md)를 따른다.
 원본 참고 이미지와 변경 전 프론트엔드 백업은 추적 제외된 `.local/design-reference`에만 보관한다.
 
 `summaries.test.ts`는 전체 집계·오류 처리를, `tests/browser/design.spec.ts`는 테마·메뉴·검색·요약·반응형 화면을 검증한다.
