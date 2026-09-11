@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preload" href="%sveltekit.assets%/fonts/line-seed-kr/LINESeedKR-Rg.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="%sveltekit.assets%/fonts/line-seed-kr/LINESeedKR-Bd.woff2" as="font" type="font/woff2" crossorigin />
+    <meta name="theme-color" content="#f8f9fb" />
+    <script>
+      // Restore only an explicit UI preference before first paint; no network or credentials.
+      try {
+        const dark = localStorage.getItem('erp.ui.theme') === 'dark';
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#141414' : '#f8f9fb';
+      } catch { document.documentElement.dataset.theme = 'light'; }
+    </script>
+    <meta name="description" content="품목과 BOM부터 부분 생산, 불량 및 재고 이력까지 연결하는 로컬 조립 제조 ERP" />
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>

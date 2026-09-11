@@ -1,0 +1,41 @@
+{
+  "name": "assembly-erp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.11.0",
+  "engines": { "node": ">=22.12.0", "pnpm": "10.11.0" },
+  "scripts": {
+    "setup:local": "node scripts/erp.mjs setup:local",
+    "db:up": "node scripts/erp.mjs db:up",
+    "db:down": "node scripts/erp.mjs db:down",
+    "db:migrate": "node scripts/erp.mjs db:migrate",
+    "db:status": "node scripts/erp.mjs db:status",
+    "db:generate": "node scripts/generate-db.mjs",
+    "check:generated": "node scripts/generate-db.mjs --check",
+    "demo:seed": "node scripts/erp.mjs demo:seed",
+    "demo:reset": "node scripts/erp.mjs demo:reset",
+    "dev": "node scripts/erp.mjs dev",
+    "dev:neon": "node scripts/neon.mjs dev",
+    "neon:migrate": "node scripts/neon.mjs migrate",
+    "neon:status": "node scripts/neon.mjs status",
+    "neon:probe": "node scripts/neon.mjs probe",
+    "neon:verify": "node scripts/neon-verify.mjs",
+    "dev:api": "node scripts/erp.mjs dev:api",
+    "dev:web": "pnpm --filter @erp/web dev",
+    "check": "node scripts/erp.mjs check",
+    "build": "node scripts/erp.mjs build",
+    "test:unit": "node scripts/erp.mjs test:unit",
+    "test:integration": "node scripts/erp.mjs test:integration",
+    "test:e2e": "node scripts/erp.mjs test:e2e",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "contract:lint": "redocly lint contracts/openapi.yaml",
+    "contract:generate": "node scripts/generate-openapi.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "check:invariants": "node scripts/erp.mjs check:invariants"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@redocly/cli": "2.52.0"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "source": "https://seed.line.me/src/images/fonts/LINE_Seed_Sans_KR.zip",
+  "archiveDirectory": "LINE_SeedKR_2023.09.06",
+  "retrievedAt": "2026-09-11T13:34:26.365Z",
+  "modified": false,
+  "files": {
+    "LINESeedKR-Rg.woff2": {
+      "bytes": 523808,
+      "sha256": "709275188a8ef23040274490cd1fa048a02e9c441a238a4252837258cf8a43df"
+    },
+    "LINESeedKR-Bd.woff2": {
+      "bytes": 463480,
+      "sha256": "57f95a6c2ce2ff6fa84e28f96bc5d29dcf5a7e308c9a25ed9541eacff3edfa56"
+    },
+    "OFL.txt": {
+      "bytes": 4321,
+      "sha256": "2e877cb9d5c82b6f0e0c5da509eb905ae8e299467da73c32f7b80bb9ce51ab62"
+    }
+  }
+}
