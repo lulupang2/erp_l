@@ -48,6 +48,9 @@ jobs:
       - name: Start PostgreSQL fixtures
         run: pnpm db:up
 
+      - name: Deployment script syntax
+        run: bash -n scripts/deploy-production.sh
+
       - name: Static checks
         run: pnpm check
 

@@ -12,6 +12,7 @@ on:
         default: main
 
 permissions:
+  actions: read
   contents: read
   packages: write
 
@@ -45,6 +46,14 @@ jobs:
           image_base="ghcr.io/${GITHUB_REPOSITORY,,}"
           echo "IMAGE_BASE=$image_base" >> "$GITHUB_ENV"
           echo "DEPLOY_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Verify checkout has successful main CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$DEPLOY_SHA&event=push&branch=main&status=success&per_page=100" \
+            --jq '.workflow_runs | length' | grep -Eq '^[1-9][0-9]*$'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -96,45 +105,8 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p ~/assembly-erp'
-          scp -i ~/.ssh/deploy_key compose.prod.yml Caddyfile .release.env \
+          scp -i ~/.ssh/deploy_key compose.prod.yml Caddyfile .release.env scripts/deploy-production.sh \
             "$DEPLOY_USER@$DEPLOY_HOST:~/assembly-erp/"
-      - name: Verify selected SHA has successful CI
-        if: github.event_name == 'workflow_dispatch'
-        shell: bash
-        run: |
-          set -euo pipefail
-          REF="${{ inputs.ref }}"
-          if [[ "$REF" =~ ^[0-9a-f]{40}$ ]]; then
-            SHA="$REF"
-          else
-            SHA=$(git ls-remote origin "refs/heads/$REF" 2>/dev/null | head -1 | cut -f1)
-            if [[ -z "$SHA" ]]; then
-              SHA=$(git ls-remote origin "refs/tags/$REF" 2>/dev/null | head -1 | cut -f1)
-            fi
-          fi
-          if [[ -z "$SHA" ]]; then
-            echo "Could not resolve ref $REF to a commit SHA"
-            exit 1
-          fi
-          echo "Verifying CI for SHA: $SHA"
-          RESULT=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/$SHA/status" |
-            python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('total_count',0), d.get('state','unknown'))" 2>/dev/null || echo "0 unknown")
-          TOTAL=$(echo "$RESULT" | cut -d' ' -f1)
-          STATE=$(echo "$RESULT" | cut -d' ' -f2)
-          if [[ "$TOTAL" -eq 0 ]]; then
-            COMMIT_MSG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/$SHA" |
-              python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit',{}).get('message','unknown'))" 2>/dev/null | head -1)
-            echo "SHA $SHA has no CI status checks ($COMMIT_MSG). Deployment blocked by R2."
-            exit 1
-          fi
-          if [[ "$STATE" != "success" ]]; then
-            echo "SHA $SHA CI state is $STATE, not success. Deployment blocked by R2."
-            exit 1
-          fi
-          echo "SHA $SHA verified: CI passed ($TOTAL checks)."
-
       - name: Pull, migrate and restart
         shell: bash
         env:
@@ -143,51 +115,18 @@ jobs:
           set -euo pipefail
           printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
             "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
-          ssh -T -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" 'bash --noprofile --norc -se' <<'REMOTE' | tee deployment-output.log
-          set -euo pipefail
-          cd ~/assembly-erp
-          if [ ! -f .env.production ]; then
-            echo 'Missing ~/assembly-erp/.env.production. See docs/DEPLOYMENT.md.' >&2
-            exit 2
-          fi
-          dc='docker compose --env-file .env.production --env-file .release.env -f compose.prod.yml'
-          $dc pull api web caddy
-          $dc run --rm -T --interactive=false migrate </dev/null
-
-          $dc run --rm -T --interactive=false migrate-v2 </dev/null
-          $dc up -d --wait --wait-timeout 120 --remove-orphans api web caddy </dev/null
-          # Liveness: DB-free health check (R4)
-          $dc exec -T --interactive=false api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health >/dev/null
-          # Readiness: DB-dependent readiness check (R4)
-          $dc exec -T --interactive=false api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/ready >/dev/null
-          $dc exec -T --interactive=false web node -e "fetch('http://127.0.0.1:3000/items').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-          # Validate Caddy config (bind-mounted; container can access it)
-          $dc exec -T --interactive=false caddy caddy validate --config /etc/caddy/Caddyfile || { echo "Caddy config validation failed"; exit 1; }
-          # Explicit reload (safe startup handling; propagate failure)
-          $dc exec -T --interactive=false caddy caddy reload || { echo "Caddy reload failed"; exit 1; }
-          # Verify actual running images rather than accepting an old healthy deployment.
-          source .release.env
-          for service in api web; do
-            container_id=$($dc ps -q "$service")
-            test -n "$container_id"
-            if [ "$service" = api ]; then expected="$API_IMAGE:$IMAGE_TAG"; else expected="$WEB_IMAGE:$IMAGE_TAG"; fi
-            actual=$(docker inspect --format '{{.Config.Image}}' "$container_id")
-            test "$actual" = "$expected"
-            test "$(docker inspect --format '{{.Image}}' "$container_id")" = "$(docker image inspect --format '{{.Id}}' "$expected")"
-          done
-          $dc exec -T --interactive=false api curl --fail --silent --show-error http://127.0.0.1:8080/api/v2/reference >/dev/null
-          $dc ps
-          docker logout ghcr.io >/dev/null 2>&1 || true
-          printf 'DEPLOYMENT_COMPLETE=%s\n' "$IMAGE_TAG"
-          REMOTE
+          trap 'ssh -n -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "docker logout ghcr.io" >/dev/null 2>&1 || true' EXIT
+          ssh -n -T -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
+            'bash --noprofile --norc ~/assembly-erp/deploy-production.sh' | tee deployment-output.log
           grep -Fx "DEPLOYMENT_COMPLETE=$DEPLOY_SHA" deployment-output.log
 
 
-      - name: Verify public TLS and auth gate
+      - name: Verify public factory routes
         shell: bash
         run: |
           set -euo pipefail
-          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            --retry 8 --retry-delay 3 --retry-all-errors https://erp.jisung.lol/)"
-          # Basic Auth removed by user decision (2026-09-12); unauthenticated v1 smoke expects 200
-          test "$status" = "200"
+          for path in / /v2/orders /api/v2/reference; do
+            status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --retry 8 --retry-delay 3 --retry-all-errors --max-time 30 "https://erp.jisung.lol$path")"
+            test "$status" = "200"
+          done
