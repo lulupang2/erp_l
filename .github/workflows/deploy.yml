@@ -143,7 +143,7 @@ jobs:
           set -euo pipefail
           printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
             "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
-          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" <<'REMOTE'
+          ssh -T -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" 'bash --noprofile --norc -se' <<'REMOTE' | tee deployment-output.log
           set -euo pipefail
           cd ~/assembly-erp
           if [ ! -f .env.production ]; then
@@ -152,22 +152,35 @@ jobs:
           fi
           dc='docker compose --env-file .env.production --env-file .release.env -f compose.prod.yml'
           $dc pull api web caddy
-          $dc run --rm -T migrate
+          $dc run --rm -T --interactive=false migrate </dev/null
 
-          $dc run --rm -T migrate-v2
-          $dc up -d --remove-orphans api web caddy
+          $dc run --rm -T --interactive=false migrate-v2 </dev/null
+          $dc up -d --wait --wait-timeout 120 --remove-orphans api web caddy </dev/null
           # Liveness: DB-free health check (R4)
-          $dc exec -T api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health >/dev/null
+          $dc exec -T --interactive=false api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health >/dev/null
           # Readiness: DB-dependent readiness check (R4)
-          $dc exec -T api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/ready >/dev/null
-          $dc exec -T web node -e "fetch('http://127.0.0.1:3000/items').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+          $dc exec -T --interactive=false api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/ready >/dev/null
+          $dc exec -T --interactive=false web node -e "fetch('http://127.0.0.1:3000/items').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
           # Validate Caddy config (bind-mounted; container can access it)
-          $dc exec -T caddy caddy validate --config /etc/caddy/Caddyfile || { echo "Caddy config validation failed"; exit 1; }
+          $dc exec -T --interactive=false caddy caddy validate --config /etc/caddy/Caddyfile || { echo "Caddy config validation failed"; exit 1; }
           # Explicit reload (safe startup handling; propagate failure)
-          $dc exec -T caddy caddy reload || { echo "Caddy reload failed"; exit 1; }
+          $dc exec -T --interactive=false caddy caddy reload || { echo "Caddy reload failed"; exit 1; }
+          # Verify actual running images rather than accepting an old healthy deployment.
+          source .release.env
+          for service in api web; do
+            container_id=$($dc ps -q "$service")
+            test -n "$container_id"
+            if [ "$service" = api ]; then expected="$API_IMAGE:$IMAGE_TAG"; else expected="$WEB_IMAGE:$IMAGE_TAG"; fi
+            actual=$(docker inspect --format '{{.Config.Image}}' "$container_id")
+            test "$actual" = "$expected"
+            test "$(docker inspect --format '{{.Image}}' "$container_id")" = "$(docker image inspect --format '{{.Id}}' "$expected")"
+          done
+          $dc exec -T --interactive=false api curl --fail --silent --show-error http://127.0.0.1:8080/api/v2/reference >/dev/null
           $dc ps
           docker logout ghcr.io >/dev/null 2>&1 || true
+          printf 'DEPLOYMENT_COMPLETE=%s\n' "$IMAGE_TAG"
           REMOTE
+          grep -Fx "DEPLOYMENT_COMPLETE=$DEPLOY_SHA" deployment-output.log
 
 
       - name: Verify public TLS and auth gate
