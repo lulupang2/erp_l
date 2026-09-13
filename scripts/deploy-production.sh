@@ -14,6 +14,9 @@ dc='docker compose --env-file .env.production --env-file .release.env -f compose
 docker compose version
 $dc config --quiet
 test -f Caddyfile
+stage=caddy-preflight
+sudo -n install -m 0644 -o root -g root Caddyfile /etc/caddy/Caddyfile
+sudo -n caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile || { echo "Caddy config validation failed"; exit 1; }
 stage=pull
 $dc pull api web
 stage=migrate-v1
@@ -29,8 +32,6 @@ $dc exec -T --interactive=false api curl --fail --silent --show-error http://127
 # Readiness: DB-dependent readiness check (R4)
 $dc exec -T --interactive=false api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/ready >/dev/null
 $dc exec -T --interactive=false web node -e "fetch('http://127.0.0.1:3000/items').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-sudo -n install -m 0644 -o root -g root Caddyfile /etc/caddy/Caddyfile
-sudo -n caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile || { echo "Caddy config validation failed"; exit 1; }
 sudo -n systemctl reload-or-restart caddy || { echo "Caddy reload failed"; exit 1; }
 # Verify actual running images rather than accepting an old healthy deployment.
 source .release.env

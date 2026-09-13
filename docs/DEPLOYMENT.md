@@ -23,7 +23,7 @@
 3. SHA 태그로 API/Web 이미지 빌드·push.
 4. Compose, Caddyfile, 배포 스크립트, `.release.env`를 서버로 전송.
 5. 실행용 GitHub 토큰으로 서버 GHCR 로그인.
-6. 서버의 배포 스크립트 실행: 설정 검증 → pull → v1/v2 migration up → API/Web Compose up 및 health 대기 → 호스트 Caddyfile 설치·validate·reload → 실행 이미지 태그·ID 확인 → v2 API 확인.
+6. 서버의 배포 스크립트 실행: 설정 검증 → 호스트 Caddyfile 설치·validate → pull → v1/v2 migration up → API/Web Compose up 및 health 대기 → Caddy reload → 실행 이미지 태그·ID 확인 → v2 API 확인.
 7. 로컬 검증 성공 시 `.deployed.env` 기록과 커밋별 완료 표식 출력. 워크플로는 완료 표식과 배포 SHA의 일치를 검사한다.
 8. 외부 HTTPS `/`, `/v2/orders`, `/api/v2/reference` 응답을 확인한다. 이 단계까지 성공해야 GitHub 배포 성공이다.
 
@@ -126,3 +126,4 @@ curl --fail http://127.0.0.1:8080/api/v2/reference
 
 이전 SSH 표준입력 기반 배포는 마이그레이션이 나머지 입력을 소모해 재시작이 누락됐다. 이제 서버의 스크립트 파일을 명시적인 Bash로 실행하고 컨테이너 명령의 입력을 차단한다.
 이후 실행 34770843017에서는 마이그레이션·컨테이너 교체가 실제 완료됐지만 `caddy reload`의 설정 경로 누락으로 실패했다. Caddy를 Compose 컨테이너에서 분리해 Rocky Linux systemd 서비스로 운영하고, 배포 스크립트가 `/etc/caddy/Caddyfile` 설치·검증·reload를 명시적으로 수행하도록 수정했다.
+이후 실행 34771737067에서는 API/Web 교체와 마이그레이션은 성공했지만 호스트 sudoers가 준비되지 않아 `sudo -n install ...`에서 실패했다. 기존 Caddy 컨테이너가 제거된 뒤 실패하지 않도록 Caddy sudo/install/validate 검사를 컨테이너 교체 전에 실행하도록 조정했다.
