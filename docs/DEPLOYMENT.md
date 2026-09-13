@@ -150,7 +150,7 @@ CI는 Neon production secret 없이 실행 가능해야 하며, 실패한 commit
 4. SSH로 Rocky Linux의 `deploy` 사용자에 접속
 5. release 파일과 image tag 전달
 6. GHCR 로그인 및 image pull
-7. migration `up`을 one-shot으로 1회 실행
+7. v1·v2 migration `up`을 각각 one-shot으로 1회 실행
 8. API/Web 갱신 및 Caddy 설정 검증·적용(현재 workflow에 명시적인 reload 단계 추가 필요)
 9. 내부 API/Web health check
 10. 외부 `https://erp.jisung.lol`의 TLS와 Basic Auth 없는 v1 화면 HTTP 200 확인

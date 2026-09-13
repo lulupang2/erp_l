@@ -12,11 +12,20 @@ services:
     entrypoint: ["/app/erp-migrate", "up"]
     restart: "no"
 
+  migrate-v2:
+    image: "${API_IMAGE:?Set API_IMAGE in .release.env}:${IMAGE_TAG:?Set IMAGE_TAG in .release.env}"
+    network_mode: host
+    profiles: ["tools"]
+    environment:
+      V2_MIGRATION_DATABASE_URL: "${MIGRATION_DATABASE_URL:?Set MIGRATION_DATABASE_URL in .env.production}"
+    entrypoint: ["/app/erp-migrate", "up", "--v2"]
+    restart: "no"
+
   api:
     image: "${API_IMAGE:?Set API_IMAGE in .release.env}:${IMAGE_TAG:?Set IMAGE_TAG in .release.env}"
     network_mode: host
     environment:
-      V2_DATABASE_URL: "${V2_DATABASE_URL:-}"
+      V2_DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL in .env.production}"
       DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL in .env.production}"
       API_ADDR: "127.0.0.1:8080"
       PUBLIC_APP_HOST: "${PUBLIC_APP_HOST:?Set PUBLIC_APP_HOST in .env.production}"

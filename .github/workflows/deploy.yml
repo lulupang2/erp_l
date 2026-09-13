@@ -153,6 +153,8 @@ jobs:
           dc='docker compose --env-file .env.production --env-file .release.env -f compose.prod.yml'
           $dc pull api web caddy
           $dc run --rm -T migrate
+
+          $dc run --rm -T migrate-v2
           $dc up -d --remove-orphans api web caddy
           # Liveness: DB-free health check (R4)
           $dc exec -T api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health >/dev/null

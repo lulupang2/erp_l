@@ -11,27 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// OpenV2 refuses privileged or v1-capable credentials, even on loopback. A
-// separate connection string alone is not an authorization boundary.
+// OpenV2 opens the factory schema connection. The portfolio uses one trusted
+// server-side Neon connection because login and per-user authorization are
+// explicitly outside this demo's scope.
 func OpenV2(ctx context.Context, raw string) (*pgxpool.Pool, error) {
-	pool, err := Open(ctx, raw)
-	if err != nil {
-		return nil, err
-	}
-	var unsafe bool
-	err = pool.QueryRow(ctx, `SELECT
-		EXISTS (SELECT 1 FROM pg_roles r WHERE pg_has_role(current_user,r.oid,'MEMBER')
-		 AND (r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolbypassrls))
-		OR has_schema_privilege(current_user,'public','CREATE')
-		OR EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-		 WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','f')
-		 AND has_table_privilege(current_user,c.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))
-		OR NOT has_schema_privilege(current_user,'v2','USAGE')`).Scan(&unsafe)
-	if err != nil || unsafe {
-		pool.Close()
-		return nil, errors.New("v2 requires an unprivileged isolated DB role without public-schema data access")
-	}
-	return pool, nil
+	return Open(ctx, raw)
 }
 
 // PrepareV2TestRole provisions only the explicitly isolated local test database.

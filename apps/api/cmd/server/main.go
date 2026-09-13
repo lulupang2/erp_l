@@ -27,7 +27,7 @@ func run() error {
 	}
 	defer pool.Close()
 	app := httpapi.New(store.New(pool))
-	if raw := os.Getenv("V2_DATABASE_URL"); raw != "" {
+	if raw := firstValue(os.Getenv("V2_DATABASE_URL"), os.Getenv("DATABASE_URL")); raw != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), platform.OperationTimeout)
 		v2pool, err := platform.OpenV2(ctx, raw)
 		cancel()
@@ -50,6 +50,15 @@ func run() error {
 		defer cancel()
 		return app.ShutdownWithContext(ctx)
 	}
+}
+
+func firstValue(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func main() {

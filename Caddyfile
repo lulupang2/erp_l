@@ -1,8 +1,7 @@
 erp.jisung.lol {
 	encode zstd gzip
 
-# The v1 API remains intentionally anonymous; v2 authenticates with its
-# application-owned session cookie and same-origin CSRF policy.
+# Both portfolio API areas use the shared demo workspace without login.
 
 	header {
 		-Server
