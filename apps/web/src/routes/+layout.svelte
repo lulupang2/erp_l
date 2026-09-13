@@ -70,7 +70,7 @@
     <div class="sidebar-bottom">
       <div class="workflow-note"><span class="workflow-note-icon"><Icon name="layers" /></span><strong>하나로 연결되는 제조</strong><p>자재부터 완제품 입고까지,<br />작업의 흐름을 이어보세요.</p><a href={isFactory ? "/v2/orders" : "/orders/new"}>생산 시작하기 <Icon name="arrow" size={15} /></a></div>
       <details class="sidebar-guide"><summary><Icon name="help" size={18} /><span>데모 사용 안내</span></summary><p>{isFactory ? '기준정보 → 자재 입고 → 작업 지시 → 불출 → 현장 작업 → 생산 → 검사 → 완제품 입고 순서로 사용하세요.' : '품목 등록 → BOM 구성 → 부품 입고 → 생산 지시 → 실적 등록 순서로 사용하세요. 양품과 불량 모두 자재를 소비합니다.'}</p></details>
-      <div class="sidebar-footer"><Icon name="shield" size={17} /><span>포트폴리오 데모</span><a class="version" href={isFactory ? "/items" : "/v2/orders"}>{isFactory ? "이전 업무" : "공장 업무"}</a></div>
+      <div class="sidebar-footer"><Icon name="shield" size={17} /><span>포트폴리오 데모</span>{#if !isFactory}<a class="version" href="/">공장 업무</a>{/if}</div>
     </div>
   </aside>
   <div class="workspace">
