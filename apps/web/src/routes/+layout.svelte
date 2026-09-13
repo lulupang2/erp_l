@@ -3,33 +3,35 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import Icon, { type IconName } from '$lib/components/Icon.svelte';
+  import { initLocale, t, toggleLocale, i18n } from '$lib/i18n.svelte';
   import '../app.css';
 
   let { children }: { children: Snippet } = $props();
-  const legacyNavigation: { href: string; label: string; icon: IconName; group?: string }[] = [
-    { href: '/items', label: '품목 관리', icon: 'box', group: '기준 정보' },
-    { href: '/bom', label: 'BOM 구성', icon: 'layers' },
-    { href: '/inventory', label: '재고 · 입고', icon: 'inventory', group: '제조 운영' },
-    { href: '/orders', label: '생산 지시', icon: 'production' },
-    { href: '/movements', label: '재고 이력', icon: 'history' }
+  const legacyNavigation: { href: string; labelKey: Parameters<typeof t>[0]; icon: IconName; groupKey?: Parameters<typeof t>[0] }[] = [
+    { href: '/items', labelKey: 'navItems', icon: 'box', groupKey: 'legacyGroupMaster' },
+    { href: '/bom', labelKey: 'navBom', icon: 'layers' },
+    { href: '/inventory', labelKey: 'navInventoryReceipt', icon: 'inventory', groupKey: 'legacyGroupOperations' },
+    { href: '/orders', labelKey: 'navProductionOrders', icon: 'production' },
+    { href: '/movements', labelKey: 'navInventoryHistory', icon: 'history' }
   ];
   const factoryNavigation: typeof legacyNavigation = [
-    { href: '/v2/reference', label: '기준정보', icon: 'box', group: '기준 정보' },
-    { href: '/v2/orders', label: '작업 지시', icon: 'production', group: '제조 운영' },
-    { href: '/v2/sessions', label: '현장 작업', icon: 'clock' },
-    { href: '/v2/documents', label: '자재 · 생산 · 품질', icon: 'layers' },
-    { href: '/v2/inventory', label: '재고 · 추적', icon: 'inventory' }
+    { href: '/v2/reference', labelKey: 'navReference', icon: 'box', groupKey: 'legacyGroupMaster' },
+    { href: '/v2/orders', labelKey: 'navOrders', icon: 'production', groupKey: 'legacyGroupOperations' },
+    { href: '/v2/sessions', labelKey: 'navSessions', icon: 'clock' },
+    { href: '/v2/documents', labelKey: 'navDocuments', icon: 'layers' },
+    { href: '/v2/inventory', labelKey: 'navFactoryInventory', icon: 'inventory' }
   ];
   const isFactory = $derived(page.url.pathname.startsWith('/v2'));
   const navigation = $derived(isFactory ? factoryNavigation : legacyNavigation);
   const current = $derived(navigation.find(item => page.url.pathname.startsWith(item.href)));
-  const sectionLabel = $derived(current?.label ?? (page.url.pathname.startsWith('/receipts') ? '입고 상세' : page.url.pathname.startsWith('/results') ? '실적 상세' : '워크스페이스'));
+  const sectionLabel = $derived(current ? t(current.labelKey) : page.url.pathname.startsWith('/receipts') ? t('receiptDetail') : page.url.pathname.startsWith('/results') ? t('resultDetail') : t('workspace'));
   let search = $state('');
   let searchError = $state('');
   let dark = $state(false);
   let collapsed = $state(false);
 
   onMount(() => {
+    initLocale();
     dark = document.documentElement.dataset.theme === 'dark';
     try { collapsed = localStorage.getItem('erp.ui.sidebar-collapsed') === 'true'; } catch { /* Preferences are optional. */ }
   });
@@ -46,43 +48,43 @@
   async function submitSearch(event: SubmitEvent) {
     event.preventDefault(); searchError = '';
     try { await goto(`/items${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ''}`); }
-    catch { searchError = '검색 화면으로 이동하지 못했습니다. 다시 시도해 주세요.'; }
+    catch { searchError = t('searchNavigationError'); }
   }
 </script>
 
-<svelte:head><title>조립 제조 ERP</title></svelte:head>
-  <a class="skip-link" href="#main">본문으로 이동</a>
+<svelte:head><title>{t('appTitle')}</title></svelte:head>
+  <a class="skip-link" href="#main">{t('skipMain')}</a>
 <div class="app-shell" class:sidebar-collapsed={collapsed}>
   <aside class="sidebar">
-    <a href={isFactory ? "/v2/orders" : "/items"} class="brand" aria-label="조립 제조 ERP 홈">
+    <a href={isFactory ? "/v2/orders" : "/items"} class="brand" aria-label={t('appHome')}>
       <span class="brand-mark"><Icon name="box" size={27} /></span>
-      <span class="brand-wordmark"><strong>assembly<span>erp</span></strong><small>조립 제조 워크스페이스</small></span>
+      <span class="brand-wordmark"><strong>assembly<span>erp</span></strong><small>{t('appWorkspace')}</small></span>
     </a>
-    <div class="workspace-switch"><span class="workspace-avatar">A</span><span class="workspace-switch-label"><strong>조립 제조 ERP</strong><small>단일 조직 · 데모 환경</small></span></div>
-    <nav id="workspace-navigation" aria-label="주 메뉴">
+    <div class="workspace-switch"><span class="workspace-avatar">A</span><span class="workspace-switch-label"><strong>{t('workspaceName')}</strong><small>{t('workspaceScope')}</small></span></div>
+    <nav id="workspace-navigation" aria-label={t('mainMenu')}>
       {#each navigation as item}
-        {#if item.group}<div class="workspace-label">{item.group}</div>{/if}
-        <a href={item.href} aria-label={item.label} title={collapsed ? item.label : undefined} class:active={page.url.pathname.startsWith(item.href)} aria-current={page.url.pathname.startsWith(item.href) ? 'page' : undefined}>
-          <Icon name={item.icon} size={19} /><span class="nav-label">{item.label}</span><span class="nav-arrow"><Icon name="chevron" size={14} /></span>
+        {#if item.groupKey}<div class="workspace-label">{t(item.groupKey)}</div>{/if}
+        <a href={item.href} aria-label={t(item.labelKey)} title={collapsed ? t(item.labelKey) : undefined} class:active={page.url.pathname.startsWith(item.href)} aria-current={page.url.pathname.startsWith(item.href) ? 'page' : undefined}>
+          <Icon name={item.icon} size={19} /><span class="nav-label">{t(item.labelKey)}</span><span class="nav-arrow"><Icon name="chevron" size={14} /></span>
         </a>
       {/each}
     </nav>
     <div class="sidebar-bottom">
-      <div class="workflow-note"><span class="workflow-note-icon"><Icon name="layers" /></span><strong>하나로 연결되는 제조</strong><p>자재부터 완제품 입고까지,<br />작업의 흐름을 이어보세요.</p><a href={isFactory ? "/v2/orders" : "/orders/new"}>생산 시작하기 <Icon name="arrow" size={15} /></a></div>
-      <details class="sidebar-guide"><summary><Icon name="help" size={18} /><span>데모 사용 안내</span></summary><p>{isFactory ? '기준정보 → 자재 입고 → 작업 지시 → 불출 → 현장 작업 → 생산 → 검사 → 완제품 입고 순서로 사용하세요.' : '품목 등록 → BOM 구성 → 부품 입고 → 생산 지시 → 실적 등록 순서로 사용하세요. 양품과 불량 모두 자재를 소비합니다.'}</p></details>
-      <div class="sidebar-footer"><Icon name="shield" size={17} /><span>포트폴리오 데모</span>{#if !isFactory}<a class="version" href="/">공장 업무</a>{/if}</div>
+      <div class="workflow-note"><span class="workflow-note-icon"><Icon name="layers" /></span><strong>{t('connectedManufacturing')}</strong><p>{#each t('connectedManufacturingBody').split('\n') as line}{line}<br />{/each}</p><a href={isFactory ? "/v2/orders" : "/orders/new"}>{t('startProduction')} <Icon name="arrow" size={15} /></a></div>
+      <details class="sidebar-guide"><summary><Icon name="help" size={18} /><span>{t('demoGuide')}</span></summary><p>{isFactory ? t('factoryGuide') : t('legacyGuide')}</p></details>
+      <div class="sidebar-footer"><Icon name="shield" size={17} /><span>{t('portfolioDemo')}</span>{#if !isFactory}<a class="version" href="/">{t('factoryWork')}</a>{/if}</div>
     </div>
   </aside>
   <div class="workspace">
     <header class="topbar">
-      <div class="topbar-start"><button type="button" class="icon-button sidebar-toggle" aria-label={collapsed ? '메뉴 펼치기' : '메뉴 접기'} aria-expanded={!collapsed} aria-controls="workspace-navigation" onclick={toggleSidebar}><Icon name="panel" size={20} /></button><nav class="breadcrumb" aria-label="현재 위치"><span>워크스페이스</span><Icon name="chevron" size={13} /><strong>{sectionLabel}</strong></nav></div>
-      {#if !isFactory}<form class="global-search" role="search" onsubmit={submitSearch}><Icon name="search" size={17} /><label for="global-item-search" class="sr-only">전역 품목 검색</label><input id="global-item-search" bind:value={search} maxlength="100" placeholder="품목 코드 또는 이름으로 검색" autocomplete="off" /><button type="submit" aria-label="품목 검색 실행"><Icon name="arrow" size={16} /></button></form>{/if}
-      <div class="topbar-actions"><span class="demo-chip"><span></span>데모 모드</span><button type="button" class="theme-toggle icon-button" aria-label={dark ? '라이트 모드로 전환' : '다크 모드로 전환'} aria-pressed={dark} onclick={toggleTheme}><Icon name={dark ? 'sun' : 'moon'} size={18} /></button><span class="locale-chip">KO</span></div>
+      <div class="topbar-start"><button type="button" class="icon-button sidebar-toggle" aria-label={collapsed ? t('expandMenu') : t('collapseMenu')} aria-expanded={!collapsed} aria-controls="workspace-navigation" onclick={toggleSidebar}><Icon name="panel" size={20} /></button><nav class="breadcrumb" aria-label={t('currentLocation')}><span>{t('workspace')}</span><Icon name="chevron" size={13} /><strong>{sectionLabel}</strong></nav></div>
+      {#if !isFactory}<form class="global-search" role="search" onsubmit={submitSearch}><Icon name="search" size={17} /><label for="global-item-search" class="sr-only">{t('globalItemSearch')}</label><input id="global-item-search" bind:value={search} maxlength="100" placeholder={t('itemSearchPlaceholder')} autocomplete="off" /><button type="submit" aria-label={t('runItemSearch')}><Icon name="arrow" size={16} /></button></form>{/if}
+      <div class="topbar-actions"><span class="demo-chip"><span></span>{t('demoMode')}</span><button type="button" class="theme-toggle icon-button" aria-label={dark ? t('switchLight') : t('switchDark')} aria-pressed={dark} onclick={toggleTheme}><Icon name={dark ? 'sun' : 'moon'} size={18} /></button><button type="button" class="locale-chip" aria-label={t('toggleLocale')} onclick={toggleLocale}>{i18n.locale.toUpperCase()}</button></div>
     </header>
     {#if searchError}<p class="notice notice-error" role="alert">{searchError}</p>{/if}
     <main id="main" tabindex="-1">
       {#key page.url.pathname + page.url.search}{@render children()}{/key}
     </main>
-    <footer class="workspace-footer"><span>ASSEMBLY ERP <span class="footer-separator">·</span> 연결된 기록, 일치하는 수량</span><span>한국어 <span class="footer-separator">/</span> Asia/Seoul</span></footer>
+    <footer class="workspace-footer"><span>ASSEMBLY ERP <span class="footer-separator">·</span> {t('footerSlogan')}</span><span>{t('localeTimezone')}</span></footer>
   </div>
 </div>

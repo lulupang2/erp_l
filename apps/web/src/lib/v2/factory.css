@@ -34,8 +34,10 @@
 .factory .auth-overlay .card { margin:8vh auto; max-width:460px; }
 .factory .subtext { display:block; font-size:.8125rem; color:var(--muted); }
 .factory .number { font-variant-numeric:tabular-nums; text-align:right; }
-.factory .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
-.factory .tabs .selected { border-color:var(--primary); color:var(--accent-text); background:var(--accent-soft); }
+.factory .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; padding:4px; width:fit-content; max-width:100%; border:1px solid var(--line); border-radius:12px; background:var(--surface-subtle); }
+.factory .tabs button { min-height:38px; border:1px solid transparent; border-radius:9px; padding:0 13px; background:transparent; color:var(--muted); font-weight:700; }
+.factory .tabs button:hover:not(:disabled) { background:var(--surface); border-color:var(--line-strong); color:var(--ink); }
+.factory .tabs .selected { border-color:var(--accent-line); color:var(--accent-text); background:var(--surface); box-shadow:0 1px 2px #2731420f; }
 .factory .empty { padding:28px; text-align:center; color:var(--muted); }
 .factory .wide { grid-column:1/-1; }
 @media(max-width:900px) { .factory .split { grid-template-columns:1fr; } .factory .flow { grid-template-columns:repeat(3,1fr); } .factory .line-row { grid-template-columns:1fr 1fr; } }
@@ -46,8 +48,8 @@
 .factory .heading p { font-size: var(--text-base); }
 .factory .order-list { padding: 0; overflow: hidden; }
 .factory .order-list .table-scroll { border: 0; border-radius: 0; }
-.factory .record-link { border: 0; padding: 0; background: transparent; color: var(--ink); text-align: left; font: inherit; font-weight: 600; white-space: normal; }
-.factory .record-link:hover { color: var(--accent-text); text-decoration: underline; }
+.factory .record-link { border: 1px solid transparent; border-radius:7px; padding:4px 7px; margin-left:-7px; background: transparent; color: var(--ink); text-align: left; font: inherit; font-weight: 700; white-space: normal; }
+.factory .record-link:hover { color: var(--accent-text); background:var(--accent-soft); border-color:var(--accent-line); text-decoration: none; }
 .factory .order-list td:last-child { white-space: nowrap; }
 .factory .order-list th:first-child { width: 38%; }
 .factory .order-list th:not(:first-child) { width: auto; }

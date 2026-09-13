@@ -1,7 +1,10 @@
+import { localeTag, t } from '$lib/i18n.svelte';
+
 export type Role = 'admin' | 'planner' | 'materials' | 'operator' | 'quality';
 export type Row = Record<string, any>;
 export type User = { id: string; username: string; roles: Role[]; active?: boolean };
-export const roleLabels: Record<Role, string> = { admin: '관리자', planner: '생산관리', materials: '자재담당', operator: '작업자', quality: '품질담당' };
+const roleKeys: Record<Role, Parameters<typeof t>[0]> = { admin: 'role_admin', planner: 'role_planner', materials: 'role_materials', operator: 'role_operator', quality: 'role_quality' };
+export const roleLabels = new Proxy({} as Record<Role, string>, { get: (_target, key: string) => t(roleKeys[key as Role] ?? 'dash'), ownKeys: () => Object.keys(roleKeys), getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }) });
 export const publicActor: User = { id: '00000000-0000-0000-0000-000000000002', username: 'portfolio', roles: ['admin', 'planner', 'materials', 'operator', 'quality'] };
 export const session = $state<{ user: User; csrf: string; ready: boolean; expired: boolean }>({ user: publicActor, csrf: '', ready: true, expired: false });
 export function can(...roles: Role[]) { return !!session.user?.roles.some(role => roles.includes(role)); }
@@ -14,16 +17,16 @@ export async function request<T = Row>(path: string, method = 'GET', body?: unkn
   if (key) headers['Idempotency-Key'] = key;
   let response: Response;
   try { response = await fetch(`/api/v2${path}`, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body) }); }
-  catch { throw new ApiError(0, 'NETWORK_UNKNOWN', '서버 응답을 확인하지 못했습니다. 입력과 요청 키를 유지했습니다. 같은 요청을 다시 확인하세요.'); }
+  catch { throw new ApiError(0, 'NETWORK_UNKNOWN', t('requestNetworkUnknown')); }
   let envelope: { data?: unknown; error?: { code?: string; message?: string; details?: unknown } };
   try { envelope = await response.json() as typeof envelope; }
-  catch { throw new ApiError(response.ok ? 0 : response.status, 'RESPONSE_UNKNOWN', '서버 응답을 읽지 못했습니다. 확정 여부를 확인할 때 같은 요청을 사용하세요.'); }
+  catch { throw new ApiError(response.ok ? 0 : response.status, 'RESPONSE_UNKNOWN', t('responseUnknown')); }
   if (!response.ok) {
-    throw new ApiError(response.status, envelope.error?.code ?? 'REQUEST_FAILED', envelope.error?.message ?? '요청을 처리하지 못했습니다.', envelope.error?.details);
+    throw new ApiError(response.status, envelope.error?.code ?? 'REQUEST_FAILED', envelope.error?.message ?? t('requestFailed'), envelope.error?.details);
   }
   return envelope.data as T;
 }
-export function errorText(error: unknown) { return error instanceof ApiError ? `${error.message} (${error.code})` : error instanceof Error ? error.message : '요청에 실패했습니다.'; }
+export function errorText(error: unknown) { return error instanceof ApiError ? `${error.message} (${error.code})` : error instanceof Error ? error.message : t('genericRequestFailed'); }
 
 type PendingCommand = { path: string; method: string; body: unknown; bodyJSON: string; key: string; ownerId: string };
 function cloneBody(body: unknown): unknown { return body === undefined ? undefined : JSON.parse(JSON.stringify(body)); }
@@ -44,7 +47,7 @@ export class Command {
     this.pending = null;
     this.uncertain = false;
     this.success = '';
-    this.error = '데모 작업자 정보가 변경되어 이전의 미확정 요청은 재전송하지 않습니다. 새로 입력해 주세요.';
+    this.error = t('changedActorRequest');
     return true;
   }
 
@@ -57,7 +60,7 @@ export class Command {
     const snapshot = cloneBody(body);
     const encoded = bodyJSON(snapshot);
     if (this.pending && (this.pending.path !== path || this.pending.method !== normalizedMethod || this.pending.bodyJSON !== encoded)) {
-      this.error = '처리 결과를 확인하지 못한 이전 요청이 남아 있습니다. 다른 작업을 보내기 전에 “같은 요청 다시 확인”으로 기존 요청을 먼저 확인하세요.';
+      this.error = t('pendingRequestConflict');
       this.success = '';
       this.uncertain = true;
       return;
@@ -68,7 +71,7 @@ export class Command {
     this.pending = pending;
     try {
       const result = await request<T>(pending.path, pending.method, pending.body, pending.key);
-      this.pending = null; this.uncertain = false; this.success = '저장했습니다.'; return result;
+      this.pending = null; this.uncertain = false; this.success = t('saved'); return result;
     } catch (error) {
       this.error = errorText(error);
       this.uncertain = !(error instanceof ApiError) || error.status === 0 || error.status === 408 || error.status >= 500;
@@ -95,14 +98,20 @@ export class Resource<T> {
     finally { if (generation === this.generation) this.loading = false; }
   }
 }
-export const kinds: Record<string, string> = { component_receipt: '부품 입고', issue: '자재 불출', return: '미소비 자재 반납', material_loss: '현장 자재 손실', production: '신규 생산 보고', inspection: '검사 · 재검사', disposition: '부적합 처분', rework: '재작업 보고', goods_receipt: '합격품 입고' };
+const kindKeys: Record<string, Parameters<typeof t>[0]> = {
+  component_receipt: 'kind_component_receipt', issue: 'kind_issue', return: 'kind_return', material_loss: 'kind_material_loss', production: 'kind_production', inspection: 'kind_inspection', disposition: 'kind_disposition', rework: 'kind_rework', goods_receipt: 'kind_goods_receipt'
+};
+export const kinds = new Proxy({} as Record<string, string>, { get: (_target, key: string) => kindKeys[key] ? t(kindKeys[key]) : undefined, ownKeys: () => Object.keys(kindKeys), getOwnPropertyDescriptor: (_target, key: string) => kindKeys[key] ? { enumerable: true, configurable: true } : undefined });
 export const documentRoles: Record<string, Role[]> = { component_receipt: ['materials'], issue: ['materials'], return: ['materials'], material_loss: ['materials'], production: ['operator'], inspection: ['quality'], disposition: ['quality'], rework: ['operator'], goods_receipt: ['materials'] };
-export const states: Record<string, string> = { draft: '초안', approved: '승인', retired: '사용 중지', issued: '발행', in_progress: '작업 중', held: '보류', closed: '마감', early_closed: '조기종결', cancelled: '취소', posted: '확정', reversed: '역분개 완료', active: '진행', ended: '종료', component: '부품', finished: '완제품', warehouse: '원자재 창고', floor: '현장', finished_goods: '완제품 창고', disposal: '폐기', rework: '재작업', pass: '합격', fail: '부적합' };
-export function label(value: unknown): string { return value == null ? '—' : states[String(value)] ?? kinds[String(value)] ?? String(value); }
-export function quantity(value: unknown): string { return value == null ? '—' : Number(value).toLocaleString('ko-KR'); }
-export function short(value: unknown): string { return value ? String(value).slice(0, 8) : '—'; }
+const stateKeys: Record<string, Parameters<typeof t>[0]> = {
+  draft: 'state_draft', approved: 'state_approved', retired: 'state_retired', issued: 'state_issued', in_progress: 'state_in_progress', held: 'state_held', closed: 'state_closed', early_closed: 'state_early_closed', cancelled: 'state_cancelled', posted: 'state_posted', reversed: 'state_reversed', active: 'state_active', ended: 'state_ended', component: 'state_component', finished: 'state_finished', warehouse: 'state_warehouse', floor: 'state_floor', finished_goods: 'state_finished_goods', disposal: 'state_disposal', rework: 'state_rework', pass: 'state_pass', fail: 'state_fail'
+};
+export const states = new Proxy({} as Record<string, string>, { get: (_target, key: string) => stateKeys[key] ? t(stateKeys[key]) : undefined, ownKeys: () => Object.keys(stateKeys), getOwnPropertyDescriptor: (_target, key: string) => stateKeys[key] ? { enumerable: true, configurable: true } : undefined });
+export function label(value: unknown): string { return value == null ? t('dash') : states[String(value)] ?? kinds[String(value)] ?? String(value); }
+export function quantity(value: unknown): string { return value == null ? t('dash') : Number(value).toLocaleString(localeTag()); }
+export function short(value: unknown): string { return value ? String(value).slice(0, 8) : t('dash'); }
 export function name(rows: Row[] | undefined, id: unknown): string { const row = rows?.find(row => row.id === id); return row ? `${String(row.code ?? row.username ?? short(row.id))}${row.name ? ` · ${String(row.name)}` : ''}` : short(id); }
-export function time(value: unknown): string { return value ? new Date(String(value)).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '—'; }
+export function time(value: unknown): string { return value ? new Date(String(value)).toLocaleString(localeTag(), { timeZone: 'Asia/Seoul' }) : t('dash'); }
 export type References = { items: Row[]; locations: Row[]; lots: Row[]; defect_reasons: Row[]; bom_revisions: Row[]; inspection_revisions: Row[] };
 export function text(value: unknown): string { return typeof value === 'string' ? value : value == null ? '' : String(value); }
 export function integer(value: unknown): number { const number = Number(value); return Number.isFinite(number) ? number : 0; }
