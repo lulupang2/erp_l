@@ -36,8 +36,8 @@
   }
 </script>
 
-<svelte:head><title>작업 세션 · 공장 v2</title></svelte:head>
-<div class="heading"><div><p class="eyebrow">F2-05 · WORK SESSIONS</p><h1>작업 세션</h1><p>배정된 지시에서 조립을 시작하고 부분 산출을 보고한 뒤 본인의 작업 세션을 종료합니다.</p></div></div>
+<svelte:head><title>작업 세션 · 조립 제조 ERP</title></svelte:head>
+<div class="heading"><div><p class="eyebrow">WORK SESSIONS</p><h1>작업 세션</h1><p>배정된 지시에서 조립을 시작하고 부분 산출을 보고한 뒤 본인의 작업 세션을 종료합니다.</p></div></div>
 {#if !can('admin', 'planner', 'operator')}
   <div class="notice notice-error"><strong>권한이 없습니다</strong><p>작업 세션 조회는 관리자·생산관리·작업자 역할에서 사용할 수 있습니다.</p></div>
 {:else}

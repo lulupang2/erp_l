@@ -50,8 +50,8 @@
   function addInspectionLine() { inspectionLines = [...inspectionLines, { item_code: '', name: '', required: true, acceptance: '' }]; }
 </script>
 
-<svelte:head><title>기준정보 · 공장 v2</title></svelte:head>
-<div class="heading"><div><p class="eyebrow">F2-02 · MASTER DATA</p><h1>기준정보와 승인 개정</h1><p>품목·위치·부품 로트·부적합 사유와 승인된 BOM·검사 기준을 관리합니다.</p></div><span class="status">{refs ? '기준정보 연결됨' : '조회 중'}</span></div>
+<svelte:head><title>기준정보 · 조립 제조 ERP</title></svelte:head>
+<div class="heading"><div><p class="eyebrow">MASTER DATA</p><h1>기준정보와 승인 개정</h1><p>품목·위치·부품 로트·부적합 사유와 승인된 BOM·검사 기준을 관리합니다.</p></div><span class="status">{refs ? '기준정보 연결됨' : '조회 중'}</span></div>
 {#if resource.error}<p class="notice notice-error" role="alert">{resource.error} <button class="button secondary" onclick={() => void load()}>다시 조회</button></p>{/if}
 <div class="tabs" role="tablist">{#each Object.entries(definitions) as [entryKind, definition]}<button class:selected={kind === entryKind} onclick={() => select(entryKind as ReferenceKind)}>{definition.label}</button>{/each}</div>
 <div class="split">

@@ -194,8 +194,8 @@
   function canPost(doc: Row) { return doc.status === 'draft' && can(...(documentRoles[String(doc.kind)] ?? [])); }
 </script>
 
-<svelte:head><title>수불 · 생산 · 품질 · 공장 v2</title></svelte:head>
-<div class="heading"><div><p class="eyebrow">F2-04 · DOCUMENTS</p><h1>수불 · 생산 · 품질</h1><p>부품 입고, 불출·반납, 생산, 검사, 부적합 처분·재작업과 합격품 입고를 역할별 전표로 처리합니다.</p></div><span class="status">{session.user?.username ?? '—'}</span></div>
+<svelte:head><title>수불 · 생산 · 품질 · 조립 제조 ERP</title></svelte:head>
+<div class="heading"><div><p class="eyebrow">DOCUMENTS</p><h1>수불 · 생산 · 품질</h1><p>부품 입고, 불출·반납, 생산, 검사, 부적합 처분·재작업과 합격품 입고를 역할별 전표로 처리합니다.</p></div><span class="status">{session.user?.username ?? '—'}</span></div>
 {#if localError}<p class="notice notice-error" role="alert">{localError}</p>{/if}
 <div class="tabs" role="tablist"><button class:selected={tab === 'list'} onclick={() => tab = 'list'}>문서 목록</button><button class:selected={tab === 'form'} onclick={() => { ensureKind(); tab = 'form'; }}>문서 작성</button></div>
 

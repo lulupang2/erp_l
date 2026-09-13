@@ -49,8 +49,8 @@
   function rows(value: unknown): Row[] { return Array.isArray(value) ? value as Row[] : []; }
 </script>
 
-<svelte:head><title>공장 재고 · 공장 v2</title></svelte:head>
-<div class="heading"><div><p class="eyebrow">F2-06 · INVENTORY</p><h1>공장 재고</h1><p>재고 현황, 산출 LOT, 원장 조정, LOT 추적, 감사 로그를 조회합니다.</p></div></div>
+<svelte:head><title>공장 재고 · 조립 제조 ERP</title></svelte:head>
+<div class="heading"><div><p class="eyebrow">INVENTORY</p><h1>공장 재고</h1><p>재고 현황, 산출 LOT, 원장 조정, LOT 추적, 감사 로그를 조회합니다.</p></div></div>
 {#if error}<p class="notice notice-error" role="alert">{error}</p>{/if}
 <nav class="tabs" aria-label="재고 탭">{#each [{ key: 'inventory', label: '재고' }, { key: 'output-lots', label: '산출 LOT' }, { key: 'ledger', label: '원장' }, { key: 'reconciliation', label: '조정' }, { key: 'trace', label: '추적' }, { key: 'audit', label: '감사' }] as item}<button class:selected={tab === item.key} onclick={() => switchTab(item.key as Tab)}>{item.label}</button>{/each}</nav>
 

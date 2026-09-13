@@ -1,8 +1,11 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { Resource, Command, request, can, label, name, quantity, short, publicActor } from '$lib/v2/client.svelte';
   import type { Row, References, Role } from '$lib/v2/client.svelte';
   import Feedback from '$lib/v2/Feedback.svelte';
+
+  import Icon from '$lib/components/Icon.svelte';
+  import MetricCard from '$lib/components/MetricCard.svelte';
 
   type ActionName = 'issue' | 'hold' | 'resume' | 'target' | 'allowance' | 'close' | 'early-close' | 'cancel';
   type Action = { action: ActionName; label: string; roles: Role[] };
@@ -23,6 +26,10 @@
     held: ['resume', 'target', 'allowance', 'early-close', 'cancel']
   };
 
+  let view = $state<'list' | 'create' | 'detail'>('list');
+  let search = $state('');
+  async function show(next: typeof view) { view = next; await tick(); document.getElementById('order-view-title')?.focus(); }
+  function productChanged() { createForm.bom_revision_id = ''; createForm.inspection_revision_id = ''; }
   let orders = $state<Row[]>([]);
   let references = $state<References | null>(null);
   let order = $state<Row | null>(null);
@@ -32,7 +39,7 @@
   let command = new Command();
   let filter = $state('');
   let selected = $state('');
-  let createForm = $state<Record<string, string>>({});
+  let createForm = $state<Record<string, string>>({ finished_item_id: '', bom_revision_id: '', inspection_revision_id: '' });
   let actionForm = $state<Record<string, string>>({ reason: '', quantity: '' });
   let acknowledgeVariances = $state(false);
   let selectedAction = $state<ActionName | ''>('');
@@ -41,6 +48,7 @@
   async function load() { await resource.load(() => request<Row[]>('/orders')); orders = resource.value ?? []; }
   async function loadRefs() { await refs.load(() => request<References>('/reference')); references = refs.value; }
   async function select(id: string) {
+    void show('detail');
     selected = id;
     order = null;
     await detail.load(() => request<Row>(`/orders/${id}`));
@@ -49,7 +57,7 @@
     acknowledgeVariances = false;
     selectedAction = '';
   }
-  function revisionMatches(row: Row) { return !createForm.finished_item_id || String(row.finished_item_id) === createForm.finished_item_id; }
+  function revisionMatches(row: Row) { return !!createForm.finished_item_id && String(row.finished_item_id) === createForm.finished_item_id; }
   function availableActions(): Action[] {
     if (!order) return [];
     const allowed = allowedByState[String(order.status)] ?? [];
@@ -70,7 +78,7 @@
     });
     if (saved) {
       command.success = '작업 지시 초안을 저장했습니다.';
-      createForm = {};
+      createForm = { finished_item_id: '', bom_revision_id: '', inspection_revision_id: '' };
       await load();
       if (saved.id) await select(String(saved.id));
     }
@@ -97,33 +105,47 @@
   }
 </script>
 
-<svelte:head><title>작업 지시 · 공장 v2</title></svelte:head>
-<div class="heading"><div><p class="eyebrow">F2-03 · PRODUCTION ORDERS</p><h1>작업 지시</h1><p>발행, 보류, 재개, 목표·착수 허용량 변경, 정상·조기 마감과 취소를 현재 상태에 맞춰 처리합니다.</p></div><span class="status">{orders.length}개 지시</span></div>
-<div class="split">
+<svelte:head><title>작업 지시 · 조립 제조 ERP</title></svelte:head>
+<div class="page-heading"><div><p class="eyebrow">PRODUCTION CONTROL</p><h1 id="order-view-title" tabindex="-1">{view === 'create' ? '작업 지시 만들기' : view === 'detail' ? '작업 지시 상세' : '작업 지시'}</h1><p>{view === 'create' ? '완제품을 선택하고 생산 목표와 예정일을 입력하세요.' : '자재 준비부터 검사와 입고까지, 생산 진행 상황을 확인하세요.'}</p></div>
+{#if view === 'list'}<button class="button" onclick={() => show('create')}><Icon name="plus" size={17} />작업 지시 만들기</button>{:else}<button class="button secondary" disabled={command.busy || command.locked} onclick={() => show('list')}>목록으로</button>{/if}</div>
+{#if view === 'list'}
+<div class="metric-grid" aria-label="작업 지시 요약">
+{#each [{label:'전체 지시', count: orders.length, note:'등록된 생산 계획'}, {label:'작업 대기',count:orders.filter(r => r.status === 'issued').length,note:'발행 후 착수 대기'}, {label:'작업 중',count:orders.filter(r => r.status === 'in_progress').length,note:'현장에서 생산 진행'}, {label:'보류',count:orders.filter(r => r.status === 'held').length,note:'후속 처리 확인 필요'}] as metric}
+<MetricCard label={metric.label} value={resource.error ? null : metric.count} loading={resource.loading} icon="production" note={metric.note} />
+{/each}</div>
+{/if}
+{#if view === 'create'}
   <section class="card">
     <h2>작업 지시 초안</h2>
     {#if !can('planner', 'admin')}
       <p class="notice notice-info">초안 생성은 생산관리 또는 관리자 역할이 필요합니다. 이후 발행·보류·마감 명령은 현재 서버 계약상 생산관리 역할이 필요합니다.</p>
     {:else if references}
       <form onsubmit={create}><div class="form-grid">
-        <div class="field"><label for="v2-order-item">완제품</label><select id="v2-order-item" bind:value={createForm.finished_item_id} required><option value="" disabled>완제품을 선택하세요</option>{#each references.items.filter(item => item.kind === 'finished' && item.active !== false) as item}<option value={String(item.id)}>{item.name ?? item.code}</option>{/each}</select></div>
+        <div class="field"><label for="v2-order-item">완제품</label><select id="v2-order-item" bind:value={createForm.finished_item_id} onchange={productChanged} required><option value="" disabled>완제품을 선택하세요</option>{#each references.items.filter(item => item.kind === 'finished' && item.active !== false) as item}<option value={String(item.id)}>{item.name ?? item.code}</option>{/each}</select></div>
         <div class="field"><label for="v2-order-target">합격 입고 목표</label><input id="v2-order-target" type="number" min="1" max="1000000" step="1" bind:value={createForm.target_quantity} required /></div>
-        <div class="field"><label for="v2-order-bom">승인 BOM</label><select id="v2-order-bom" bind:value={createForm.bom_revision_id} required><option value="" disabled>승인된 BOM을 선택하세요</option>{#each references.bom_revisions.filter(row => row.status === 'approved' && revisionMatches(row)) as row}<option value={String(row.id)}>{row.revision}</option>{/each}</select></div>
-        <div class="field"><label for="v2-order-inspection">검사 기준</label><select id="v2-order-inspection" bind:value={createForm.inspection_revision_id} required><option value="" disabled>검사 기준을 선택하세요</option>{#each references.inspection_revisions.filter(row => row.status === 'approved' && revisionMatches(row)) as row}<option value={String(row.id)}>{row.revision}</option>{/each}</select></div>
+        <div class="field"><label for="v2-order-bom">승인 BOM</label><select id="v2-order-bom" bind:value={createForm.bom_revision_id} disabled={!createForm.finished_item_id} required><option value="" disabled>{!createForm.finished_item_id ? '완제품을 먼저 선택하세요' : '승인된 BOM을 선택하세요'}</option>{#each references.bom_revisions.filter(row => row.status === 'approved' && revisionMatches(row)) as row}<option value={String(row.id)}>{row.revision}</option>{/each}</select></div>
+        <div class="field"><label for="v2-order-inspection">검사 기준</label><select id="v2-order-inspection" bind:value={createForm.inspection_revision_id} disabled={!createForm.finished_item_id} required><option value="" disabled>{!createForm.finished_item_id ? '완제품을 먼저 선택하세요' : '검사 기준을 선택하세요'}</option>{#each references.inspection_revisions.filter(row => row.status === 'approved' && revisionMatches(row)) as row}<option value={String(row.id)}>{row.revision}</option>{/each}</select></div>
         <div class="field"><label for="v2-order-date">예정일</label><input id="v2-order-date" type="date" bind:value={createForm.planned_date} required /></div>
       </div><div class="actions"><button class="button" disabled={command.busy || command.locked}>초안 저장</button></div></form>
-    {:else}<p class="notice notice-info">기준정보를 불러오는 중입니다.</p>{/if}
+    {:else if refs.error}<p class="notice notice-error" role="alert">{refs.error}</p><button class="button secondary" onclick={loadRefs}>다시 불러오기</button>{:else}<p role="status">기준정보를 불러오는 중입니다.</p>{/if}
+    {#if references && createForm.finished_item_id && (!references.bom_revisions.some(r => r.status === 'approved' && revisionMatches(r)) || !references.inspection_revisions.some(r => r.status === 'approved' && revisionMatches(r)))}<p class="notice notice-info">선택한 완제품의 승인된 BOM과 검사 기준이 필요합니다. <a href="/v2/reference">기준정보 등록하기</a></p>{/if}
     <Feedback {command} />
   </section>
-  <section class="card">
-    <h2>지시 목록</h2>
+{/if}
+{#if view === 'list'}
+  <section class="card order-list">
+    <div class="panel-header"><h2 class="panel-label"><Icon name="production" size={18} />작업 지시 목록</h2><span class="panel-count">{orders.length}건</span></div>
+    <div class="toolbar"><div class="field search"><label for="order-search">완제품 검색</label><input id="order-search" bind:value={search} placeholder="품목 코드 또는 이름" /></div>
     <div class="field"><label for="v2-order-filter">상태</label><select id="v2-order-filter" bind:value={filter}><option value="">전체</option><option value="draft">초안</option><option value="issued">발행</option><option value="in_progress">작업 중</option><option value="held">보류</option><option value="closed">마감</option><option value="early_closed">조기종결</option><option value="cancelled">취소</option></select></div>
-    {#if resource.loading}<p>불러오는 중…</p>{:else if resource.error}<p class="notice notice-error">{resource.error}</p>{:else}<div class="table-scroll"><table><thead><tr><th>완제품</th><th>목표</th><th>착수 허용</th><th>상태</th><th>예정일</th></tr></thead><tbody>{#each orders.filter(row => !filter || row.status === filter) as row}<tr><td><button class="button text compact" onclick={() => void select(String(row.id))}>{name(references?.items, row.finished_item_id)}</button><span class="subtext">{short(row.id)}</span></td><td class="number">{quantity(row.target_quantity)}</td><td class="number">{quantity(row.start_allowance)}</td><td><span class="status" class:held={row.status === 'held'}>{label(row.status)}</span></td><td>{String(row.planned_date ?? '—')}</td></tr>{/each}</tbody></table></div>{/if}
+    </div>
+    {#if resource.loading}<p>불러오는 중…</p>{:else if resource.error}<p class="notice notice-error">{resource.error}</p>{:else}<div class="table-scroll"><table><thead><tr><th>완제품</th><th>목표</th><th>착수 허용</th><th>상태</th><th>예정일</th></tr></thead><tbody>{#each orders.filter(row => (!filter || row.status === filter) && name(references?.items, row.finished_item_id).toLowerCase().includes(search.toLowerCase())) as row}<tr><td><button class="record-link" onclick={() => void select(String(row.id))}>{name(references?.items, row.finished_item_id)}</button><span class="subtext">지시 {short(row.id)}</span></td><td class="number">{quantity(row.target_quantity)}</td><td class="number">{quantity(row.start_allowance)}</td><td><span class="status" class:held={row.status === 'held'}>{label(row.status)}</span></td><td>{String(row.planned_date ?? '—')}</td></tr>{:else}<tr><td colspan="5" class="empty">조건에 맞는 작업 지시가 없습니다.</td></tr>{/each}</tbody></table></div>{/if}
   </section>
-</div>
+{/if}
 
-{#if order}<section class="card">
-  <div class="heading"><div><p class="eyebrow">지시 상세</p><h2>{name(references?.items, order.finished_item_id)}</h2><p>목표 {quantity(order.target_quantity)} · 시작 허용 {quantity(order.start_allowance)} · BOM {short(order.bom_revision_id)} · 담당 {short(order.assigned_user_id)}</p></div><span class="status" class:held={order.status === 'held'}>{label(order.status)}</span></div>
+{#if view === 'detail' && detail.loading}<p role="status">작업 지시를 불러오는 중입니다…</p>{:else if view === 'detail' && detail.error}<p class="notice notice-error" role="alert">{detail.error}</p><button class="button secondary" onclick={() => select(selected)}>다시 불러오기</button>{/if}
+{#if view === 'detail' && order && !detail.loading && !detail.error}<section class="card">
+  <div class="heading"><div><p class="eyebrow">지시 상세</p><h2>{name(references?.items, order.finished_item_id)}</h2><p>목표 {quantity(order.target_quantity)} · 시작 허용 {quantity(order.start_allowance)} · 예정일 {String(order.planned_date)}</p></div><span class="status" class:held={order.status === 'held'}>{label(order.status)}</span></div>
+  <div class="notice notice-info"><strong>다음 작업</strong><p>{order.status === 'draft' ? '지시를 발행하면 자재 불출과 현장 작업을 시작할 수 있습니다.' : order.status === 'held' ? '보류 사유를 확인하고 작업을 재개하세요.' : ['closed','early_closed','cancelled'].includes(String(order.status)) ? '종료된 지시입니다. 재고와 전표 이력을 확인하세요.' : Number(order.pending_quantity) > 0 ? '검사를 기다리는 산출물이 있습니다. 품질 전표에서 검사를 진행하세요.' : Number(order.accepted_quantity) > 0 ? '합격한 수량을 완제품 창고에 입고하세요.' : '자재 불출과 현장 작업을 확인한 뒤 생산 실적을 기록하세요.'}</p><div class="actions"><a class="button secondary" href="/v2/documents">자재 · 생산 · 품질</a><a class="button secondary" href="/v2/sessions">현장 작업</a><a class="button quiet" href="/v2/inventory">재고 · 추적</a></div></div>
   {#if order.status === 'held'}<div class="notice notice-info"><strong>보류 중</strong><p>새 자재 불출·생산·소비성 재작업·합격품 입고는 차단됩니다. 반납·검사·부적합 처분·정정·진행 세션 종료는 계속 처리할 수 있습니다.</p></div>{/if}
   {#if availableActions().length}
     <form onsubmit={(event) => { event.preventDefault(); void run(); }}>
