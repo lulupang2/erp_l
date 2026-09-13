@@ -387,7 +387,7 @@ export function normalizeLocale(value: string | null | undefined): Locale {
 export function initLocale() {
   if (typeof window === 'undefined') return;
   const saved = localStorage.getItem('erp.ui.locale');
-  i18n.locale = normalizeLocale(saved ?? navigator.language);
+  i18n.locale = normalizeLocale(saved ?? fallback);
   i18n.ready = true;
   applyLocale();
 }

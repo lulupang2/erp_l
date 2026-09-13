@@ -31,9 +31,9 @@
   font-weight: 400;
   --accent: #f97316;
   --accent-text: #a33c06;
-  --primary: #b54708;
+  --primary: #8f3306;
   --on-primary: #ffffff;
-  --primary-hover: #a84107;
+  --primary-hover: #7c2d05;
   --accent-soft: #fff2e8;
   --accent-line: #f6d9c2;
   --canvas: #f8f9fb;
@@ -153,7 +153,7 @@ form { margin: 0; }
 .workspace { min-width: 0; display: flex; flex-direction: column; }
 .topbar { min-height: 77px; padding: 0 30px; border-bottom: 1px solid var(--line); background: var(--surface); display: flex; align-items: center; gap: 28px; }
 .topbar-start { display: flex; align-items: center; gap: 17px; min-width: 0; }
-.icon-button { border: 1px solid var(--line-strong); background: linear-gradient(180deg, var(--surface), var(--surface-subtle)); color: var(--muted); width: 35px; height: 35px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; box-shadow: var(--button-shadow); }
+.icon-button { border: 1px solid var(--line-strong); background: var(--surface); color: var(--muted); width: 35px; height: 35px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; box-shadow: var(--button-shadow); }
 .icon-button:hover { border-color: var(--control-border); background: var(--surface-hover); color: var(--accent-text); box-shadow: var(--button-shadow-hover); }
 .sidebar-toggle { border: 0; }
 .breadcrumb { display: flex; gap: 12px; align-items: center; font-size: var(--text-xs); white-space: nowrap; color: var(--muted); }
@@ -214,15 +214,15 @@ main { padding: 30px 32px 36px; width: 100%; max-width: 1700px; margin: 0 auto; 
 .view-tabs button > span { display: inline-block; padding: 0 5px; background: var(--surface-subtle); border-radius: 4px; margin-left: 6px; font-size: var(--text-xs); }
 
 /* Existing forms keep their labels, validation, request keys and save behavior. */
-.button { border: 1px solid color-mix(in srgb, var(--primary) 84%, #000 16%); border-radius: 8px; background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 92%, #fff 8%), var(--primary)); color: var(--on-primary); font-weight: 700; font-size: var(--text-base); padding: 0 16px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; line-height: 1; white-space: nowrap; min-height: 44px; box-shadow: var(--button-shadow); transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease, transform .15s ease; }
+.button { border: 1px solid color-mix(in srgb, var(--primary) 84%, #000 16%); border-radius: 8px; background: var(--primary); color: var(--on-primary); font-weight: 700; font-size: var(--text-base); padding: 0 16px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; line-height: 1; white-space: nowrap; min-height: 44px; box-shadow: var(--button-shadow); transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease, transform .15s ease; }
 .button > .ui-icon { display: block; flex: 0 0 auto; }
 /* LINE Seed KR's visible glyph box sits a touch high inside flex-centered anchors.
    Keep the control box fixed and optically nudge link-button content down by 1px. */
 a.button:not(.compact) { padding-top: 2px; padding-bottom: 0; }
 .button:disabled { background: var(--disabled); color: var(--muted); border-color: var(--line-strong); box-shadow: none; }
-.button:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, var(--primary-hover) 90%, #fff 10%), var(--primary-hover)); text-decoration: none; box-shadow: var(--button-shadow-hover); transform: translateY(-1px); }
+.button:hover:not(:disabled) { background: var(--primary-hover); text-decoration: none; box-shadow: var(--button-shadow-hover); transform: translateY(-1px); }
 .button:active:not(:disabled) { transform: translateY(0); box-shadow: var(--button-shadow); }
-.button.secondary { background: linear-gradient(180deg, var(--surface), var(--surface-subtle)); color: var(--ink); border-color: var(--line-strong); }
+.button.secondary { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
 .button.secondary:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--control-border); color: var(--accent-text); }
 .button.quiet { background: transparent; color: var(--muted); border-color: transparent; padding-left: 8px; padding-right: 8px; }
 .button.quiet:hover:not(:disabled) { background: var(--surface-subtle); color: var(--ink); box-shadow: none; }
