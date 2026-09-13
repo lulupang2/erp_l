@@ -45,7 +45,7 @@
     <section class="card">
       <h2>세션 시작</h2>
       {#if can('operator', 'admin')}
-        <form onsubmit={start}><div class="field"><label for="v2-session-order">작업 지시</label><select id="v2-session-order" bind:value={selectedOrder} required><option value=""></option>{#each startableOrders() as row}<option value={String(row.id)}>{name(undefined, row.finished_item_id)} · {short(row.id)} · {label(row.status)}</option>{/each}</select><span class="subtext">작업자는 자신에게 배정된 발행/작업 중 지시만 표시합니다. 서버가 시작 시 상태와 권한을 다시 검사합니다.</span></div><div class="actions"><button class="button" disabled={command.busy || command.locked || !selectedOrder}>세션 시작</button></div></form>
+        <form onsubmit={start}><div class="field"><label for="v2-session-order">작업 지시</label><select id="v2-session-order" bind:value={selectedOrder} required><option value="" disabled>시작할 작업 지시를 선택하세요</option>{#each startableOrders() as row}<option value={String(row.id)}>{name(undefined, row.finished_item_id)} · {short(row.id)} · {label(row.status)}</option>{/each}</select><span class="subtext">작업자는 자신에게 배정된 발행/작업 중 지시만 표시합니다. 서버가 시작 시 상태와 권한을 다시 검사합니다.</span></div><div class="actions"><button class="button" disabled={command.busy || command.locked || !selectedOrder}>세션 시작</button></div></form>
       {:else}<p class="muted">생산관리자는 세션을 조회할 수 있지만 작업을 대신 시작하지 않습니다.</p>{/if}
       <Feedback {command} />
     </section>

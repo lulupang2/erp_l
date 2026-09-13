@@ -61,8 +61,8 @@
       <div class="form-grid">
         {#each definitions[kind].fields as field}
           {#if field.type === 'textarea'}<div class="field wide"><label for={`v2-${field.key}`}>{field.label}</label><textarea id={`v2-${field.key}`} bind:value={form[field.key]} required></textarea></div>
-          {:else if field.type === 'select'}<div class="field"><label for={`v2-${field.key}`}>{field.label}</label><select id={`v2-${field.key}`} bind:value={form[field.key]} required><option value=""></option>{#each field.options ?? [] as option}<option value={option}>{label(option)}</option>{/each}</select></div>
-          {:else if field.type === 'ref'}<div class="field"><label for={`v2-${field.key}`}>{field.label}</label><select id={`v2-${field.key}`} bind:value={form[field.key]} required><option value=""></option>{#each refs?.[field.ref ?? 'items'] ?? [] as option}<option value={String(option.id)}>{name(refs?.[field.ref ?? 'items'], option.id)}</option>{/each}</select></div>
+          {:else if field.type === 'select'}<div class="field"><label for={`v2-${field.key}`}>{field.label}</label><select id={`v2-${field.key}`} bind:value={form[field.key]} required><option value="" disabled>{field.label}을 선택하세요</option>{#each field.options ?? [] as option}<option value={option}>{label(option)}</option>{/each}</select></div>
+          {:else if field.type === 'ref'}<div class="field"><label for={`v2-${field.key}`}>{field.label}</label><select id={`v2-${field.key}`} bind:value={form[field.key]} required><option value="" disabled>{field.label}을 선택하세요</option>{#each refs?.[field.ref ?? 'items'] ?? [] as option}<option value={String(option.id)}>{name(refs?.[field.ref ?? 'items'], option.id)}</option>{/each}</select></div>
           {:else if field.type === 'fixed'}<div class="field"><label for="v2-fixed-unit">{field.label}</label><input id="v2-fixed-unit" value="ea" disabled /></div>
           {:else}<div class="field"><label for={`v2-${field.key}`}>{field.label}</label><input id={`v2-${field.key}`} bind:value={form[field.key]} required /></div>{/if}
         {/each}
