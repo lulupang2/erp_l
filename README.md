@@ -1,23 +1,28 @@
 # 조립 제조 ERP
 
-SvelteKit과 Go Fiber로 구현한 조립 제조 ERP 포트폴리오입니다. **품목 → BOM → 부품 입고 → 생산 지시 → 부분 생산·불량 → 재고 이력**을 연결합니다.
-제품 내부 로그인은 없는 단일 조직·단일 재고 위치 데모입니다. 로컬/Neon 검증은 완료했고, 후속 요청으로 `erp.jisung.lol` Rocky Linux 포트폴리오 배포와 CI/CD를 준비하고 있습니다. 공개 환경은 Caddy Basic Auth 앞에서만 운영하는 것을 기준으로 합니다.
+> **2026-09-14 전환:** v2는 소규모 조립공장 흐름(작업 지시, 자재 불출·반납, 생산, 검사·불량, 완제품 입고)을 시연합니다. 포트폴리오 범위에서는 로그인·계정 관리·사용자별 권한을 제외하고 하나의 공용 데모 작업 공간으로 실행합니다.
 
-현재 구현·검증 결과와 남은 작업은 **[PROGRESS](docs/PROGRESS.md)**에서 관리합니다. 로컬 PostgreSQL MVP 검증에 이어 승인된 ERP 전용 Neon에서 실제 TLS 연결·마이그레이션·브라우저 생산 흐름·유휴 재개를 검증했습니다. 자동 명령 실행과 수동 제어 인계 범위는 진행 기록에 구분합니다.
+SvelteKit과 Go Fiber로 구현한 조립 제조 ERP 포트폴리오입니다. **품목 → BOM → 부품 입고 → 생산 지시 → 부분 생산·불량 → 재고 이력**을 연결합니다.
+v1과 v2 모두 포트폴리오 데모이며 로그인 기능을 포함하지 않습니다. 운영 환경의 사용자 인증·권한 모델은 별도 요구사항으로 설계해야 합니다.
+
+현재 구현·검증 결과와 남은 작업은 **[PROGRESS](docs/PROGRESS.md)**에서 관리합니다. 아래 로컬 PostgreSQL MVP 및 승인된 ERP 전용 Neon의 TLS 연결·마이그레이션·브라우저 생산 흐름·유휴 재개 결과는 v1의 날짜별 이력입니다. 이번 문서 정합화나 병렬 작업 시작은 재검증·production 배포·v2 통과 증거가 아닙니다.
 
 ## 기준 문서
 
 | 문서 | 책임 |
 | --- | --- |
-| [PRD](docs/PRD.md) | 제품 목표·범위·업무 규칙·제품 인수 조건 |
+| [PRD v2](docs/PRD.md) | 구현 중인 목표 제품의 범위·업무 규칙·인수 조건 |
 | [ADR 목록](docs/adr/README.md) | 기술 결정의 배경·대안·트레이드오프 |
-| [SSOT](docs/SSOT.md) | 수량 제한·데이터·API·트랜잭션·연결·검증 규칙 |
-| [API 계약](contracts/openapi.yaml) / [DTO 개요](contracts/README.md) | 실제 요청·응답과 오류 스키마 |
-| [ERD](docs/ERD.md) | 실제 마이그레이션의 테이블·관계·제약 |
-| [데모 절차](docs/DEMO.md) | 키보드 조립 및 실패 시나리오 시연 |
-| [프론트 디자인](docs/UI-DESIGN.md) | NASEEJ 참고 방향, 라이트/다크 테마와 화면 동작 |
+| [SSOT v2](docs/SSOT.md) | 목표 수량·권한·데이터·API·트랜잭션·검증 규칙; 구현 완료 명세가 아님 |
+| [API 계약](contracts/openapi.yaml) / [DTO 개요](contracts/README.md) | v1 계약 기준과 v2 계약 전환의 구분 |
+| [ERD](docs/ERD.md) | v1 마이그레이션의 테이블·관계·제약; v2 모델은 별도 검증 필요 |
+| [v1 데모 절차](docs/DEMO.md) | 구현된 키보드 조립 및 실패 시나리오 시연 |
+| [프론트 디자인](docs/UI-DESIGN.md) | v1 디자인·검증 이력과 v2 화면 요구 구분 |
 | [Neon 체크리스트](docs/NEON-CHECKLIST.md) | 실제 Neon 연결·업무 흐름·유휴 재개 검증 |
 | [Rocky Linux 배포](docs/DEPLOYMENT.md) | GitHub Actions CI/CD, GHCR, Docker Compose, Caddy/TLS와 서버 준비 |
+| [2026-09-12 코드 리뷰](docs/CODE-REVIEW-2026-09-12.md) | v1 로컬 회귀 및 배포 지적 이력, 후속 결정과 검증 상태 |
+| [공장 흐름 전환 계획](docs/FACTORY-PLAN.md) | v2 단계별 구현·인수 조건·데이터 이전 |
+| [v1 PRD](docs/PRD-V1.md) / [v1 SSOT](docs/SSOT-V1.md) | 보존된 v1 코드·데이터의 업무 기준; v2 목표와 구분 |
 
 ## 실행 환경과 고정 버전
 
@@ -128,7 +133,7 @@ pnpm contract:lint
 
 SQL 원본은 `apps/api/db/queries`, 마이그레이션은 `apps/api/db/migrations`입니다. `check:generated`는 실제 sqlc로 재생성한 파일이 기존 파일과 같은지 확인합니다. API 명세 원본은 `scripts/generate-openapi.mjs`이며 생성 결과와 서버·클라이언트를 함께 유지합니다.
 
-## 구조와 핵심 설계
+## v1 구조와 핵심 설계
 
 ```text
 apps/
@@ -184,8 +189,10 @@ Neon 실행에는 DB 컨테이너가 필요하지 않습니다. 화면은 동일
 
 ## Rocky Linux production 배포
 
-후속 요청으로 `erp.jisung.lol` 배포 설계와 절차를 추가했습니다. 목표 production 구성은 `adapter-node` Web과 Go API를 Docker로 실행하고 둘 다 loopback에만 바인딩하며, Caddy만 80/443을 수신하는 방식입니다. `main` CI가 성공한 commit만 SHA 이미지로 배포하도록 구성합니다.
+`erp.jisung.lol`의 목표 production 구성은 `adapter-node` Web과 Go API를 Docker로 실행하고 둘 다 loopback에만 바인딩하며, Caddy만 80/443을 수신하는 방식입니다. **Caddy는 TLS와 역프록시를 담당하며 Basic Auth를 요구하지 않습니다.** 이는 사용자의 배포 결정이며 v1의 익명 조회·쓰기 위험을 없애지 않습니다.
 
-실제 서버 준비, DNS, `.env.production`, GitHub secrets, 배포 확인과 롤백은 [DEPLOYMENT](docs/DEPLOYMENT.md)를 따릅니다. 문서가 존재한다는 사실만으로 production 배포 완료로 간주하지 않으며 실제 완료 상태는 [PROGRESS](docs/PROGRESS.md)에 기록합니다. 앱 자체 사용자 인증은 여전히 범위 밖이므로 Caddy Basic Auth를 제거한 채 인터넷에 공개하지 않습니다.
+2026-09-12 리뷰 당시 Basic Auth 주석 처리, 수동 배포 CI 검증, Caddy reload, 주기 DB health check가 지적되었습니다. Basic Auth 복구 요구는 이후 사용자 결정으로 대체되었습니다. 나머지 수정과 no-proxy-auth 설정 적용·배포 검증 여부는 [리뷰 문서](docs/CODE-REVIEW-2026-09-12.md)와 [PROGRESS](docs/PROGRESS.md)의 실제 후속 증거를 따릅니다. 이 문서 수정만으로 해결을 선언하지 않습니다.
 
-이 프로젝트는 애플리케이션 사용자 계정·권한, 다중 창고·재고 조정·원가·판매·구매를 포함하지 않습니다. production reverse proxy 인증은 제품 사용자/권한 모델의 대체가 아니라 포트폴리오 배포 보호 장치입니다.
+실제 서버 준비, DNS, `.env.production`, GitHub secrets, 배포 확인과 롤백은 [DEPLOYMENT](docs/DEPLOYMENT.md)를 따릅니다. 문서 존재나 작업자 시작을 production 완료로 간주하지 않습니다. v1에 실제 업무·민감 데이터를 넣지 않는 데모 운영은 위험 제한 권고이지 서버 접근 통제가 아닙니다.
+
+v1에는 애플리케이션 사용자 계정·권한이 없습니다. **v2에는 사용자 세션·역할별 서버 권한·감사가 필수**이며 proxy 인증 제거와 별개의 제품 요구입니다. v2도 수주·구매·출하·회계·원가·다중 공장 전체 ERP로 확대하지 않습니다. v1의 단일 재고 위치와 달리 v2는 창고·지시별 현장·품질 상태의 논리 위치를 포함합니다.

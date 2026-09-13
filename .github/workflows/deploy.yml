@@ -98,6 +98,42 @@ jobs:
           ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p ~/assembly-erp'
           scp -i ~/.ssh/deploy_key compose.prod.yml Caddyfile .release.env \
             "$DEPLOY_USER@$DEPLOY_HOST:~/assembly-erp/"
+      - name: Verify selected SHA has successful CI
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF="${{ inputs.ref }}"
+          if [[ "$REF" =~ ^[0-9a-f]{40}$ ]]; then
+            SHA="$REF"
+          else
+            SHA=$(git ls-remote origin "refs/heads/$REF" 2>/dev/null | head -1 | cut -f1)
+            if [[ -z "$SHA" ]]; then
+              SHA=$(git ls-remote origin "refs/tags/$REF" 2>/dev/null | head -1 | cut -f1)
+            fi
+          fi
+          if [[ -z "$SHA" ]]; then
+            echo "Could not resolve ref $REF to a commit SHA"
+            exit 1
+          fi
+          echo "Verifying CI for SHA: $SHA"
+          RESULT=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/$SHA/status" |
+            python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('total_count',0), d.get('state','unknown'))" 2>/dev/null || echo "0 unknown")
+          TOTAL=$(echo "$RESULT" | cut -d' ' -f1)
+          STATE=$(echo "$RESULT" | cut -d' ' -f2)
+          if [[ "$TOTAL" -eq 0 ]]; then
+            COMMIT_MSG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/$SHA" |
+              python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit',{}).get('message','unknown'))" 2>/dev/null | head -1)
+            echo "SHA $SHA has no CI status checks ($COMMIT_MSG). Deployment blocked by R2."
+            exit 1
+          fi
+          if [[ "$STATE" != "success" ]]; then
+            echo "SHA $SHA CI state is $STATE, not success. Deployment blocked by R2."
+            exit 1
+          fi
+          echo "SHA $SHA verified: CI passed ($TOTAL checks)."
 
       - name: Pull, migrate and restart
         shell: bash
@@ -118,11 +154,19 @@ jobs:
           $dc pull api web caddy
           $dc run --rm -T migrate
           $dc up -d --remove-orphans api web caddy
+          # Liveness: DB-free health check (R4)
           $dc exec -T api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health >/dev/null
+          # Readiness: DB-dependent readiness check (R4)
+          $dc exec -T api curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/ready >/dev/null
           $dc exec -T web node -e "fetch('http://127.0.0.1:3000/items').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+          # Validate Caddy config (bind-mounted; container can access it)
+          $dc exec -T caddy caddy validate --config /etc/caddy/Caddyfile || { echo "Caddy config validation failed"; exit 1; }
+          # Explicit reload (safe startup handling; propagate failure)
+          $dc exec -T caddy caddy reload || { echo "Caddy reload failed"; exit 1; }
           $dc ps
           docker logout ghcr.io >/dev/null 2>&1 || true
           REMOTE
+
 
       - name: Verify public TLS and auth gate
         shell: bash
@@ -130,4 +174,5 @@ jobs:
           set -euo pipefail
           status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
             --retry 8 --retry-delay 3 --retry-all-errors https://erp.jisung.lol/)"
-          test "$status" = "401"
+          # Basic Auth removed by user decision (2026-09-12); unauthenticated v1 smoke expects 200
+          test "$status" = "200"

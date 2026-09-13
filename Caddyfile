@@ -1,11 +1,8 @@
 erp.jisung.lol {
 	encode zstd gzip
 
-	# The application itself has no accounts. Keep the public deployment closed
-	# behind reverse-proxy authentication until product authentication is added.
-	basic_auth {
-		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
-	}
+# The v1 API remains intentionally anonymous; v2 authenticates with its
+# application-owned session cookie and same-origin CSRF policy.
 
 	header {
 		-Server

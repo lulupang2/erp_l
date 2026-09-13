@@ -1,13 +1,13 @@
 # ADR-0003: SvelteKit + TypeScript와 Go API의 책임 분리
 
-- 상태: 채택 / 구현 전
+- 상태: v1 채택·구현 / v2에서도 유지; v2 화면 인수는 [PROGRESS](../PROGRESS.md) 증거 대기
 - 기록일: 2026-09-11
 - 출처: Svelte는 사용자 지정, SvelteKit + TypeScript는 기존 계획에 포함된 진행 합의 구성
-- 관련 요구사항: PRD FR-01~07, NFR-04, 9절
+- 관련 요구사항: [PRD-V1](../PRD-V1.md) FR-01~07, NFR-04, 9절; v2 기술 스택 유지
 
 ## 배경
 
-사용자는 Svelte 프론트엔드를 원한다. MVP에는 여러 업무 화면과 입력 폼, 목록·상세 간 이동이 필요하다.
+사용자는 Svelte 프론트엔드를 원한다. 이 결정의 v1 MVP에는 여러 업무 화면과 입력 폼, 목록·상세 간 이동이 필요했다. v2 전체 화면 요구와 인수는 [UI-DESIGN](../UI-DESIGN.md)의 v2 구분 및 [PRD v2](../PRD.md)를 따른다.
 생산과 재고의 최종 판정은 Go API에서 일관되게 수행해야 한다.
 
 ## 결정

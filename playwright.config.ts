@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const webPort = process.env.E2E_WEB_PORT ?? '5174';
+
 export default defineConfig({
   testDir: './tests/browser',
   fullyParallel: false,
@@ -9,7 +11,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   reporter: [['line'], ['json', { outputFile: '.local/e2e-results.json' }]],
   use: {
-    baseURL: 'http://127.0.0.1:5174',
+    baseURL: `http://127.0.0.1:${webPort}`,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
@@ -23,9 +25,10 @@ export default defineConfig({
     },
     {
       command: 'node scripts/erp.mjs serve:test:web',
-      url: 'http://127.0.0.1:5174',
+      url: `http://127.0.0.1:${webPort}`,
       reuseExistingServer: false,
       timeout: 120_000,
     },
   ],
 });
+

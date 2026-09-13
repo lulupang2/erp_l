@@ -73,6 +73,20 @@ try {
       requireValue(env, 'MIGRATION_DATABASE_URL');
       await go('run', './cmd/migrate', action === 'db:status' ? 'status' : 'up');
       break;
+    case 'db:v2:migrate':
+    case 'db:v2:status':
+      requireValue(env, 'V2_MIGRATION_DATABASE_URL');
+      await go('run', './cmd/migrate', action === 'db:v2:status' ? 'status' : 'up', '--v2');
+      break;
+    case 'db:v2:role':
+      requireValue(env, 'V2_MIGRATION_DATABASE_URL');
+      if (process.argv.length !== 4) throw new Error('An existing unprivileged application role must be specified.');
+      await go('run', './cmd/v2role', process.argv[3]);
+      break;
+    case 'v2:admin':
+      requireValue(env, 'V2_DATABASE_URL');
+      await go('run', './cmd/v2admin', ...process.argv.slice(3));
+      break;
     case 'demo:seed':
       requireValue(env, 'DATABASE_URL');
       await go('run', './cmd/demo', 'seed');
@@ -101,7 +115,7 @@ try {
       await web('build');
       break;
     case 'test:unit':
-      env = { ...env, TEST_DATABASE_URL: '' };
+      env = { ...env, TEST_DATABASE_URL: '', TEST_V2_DATABASE_URL: '', V2_DATABASE_URL: '', V2_MIGRATION_DATABASE_URL: '' };
       await go('test', '-count=1', './...');
       await web('test');
       await run(process.execPath, ['--test', 'scripts/environment.test.mjs', 'scripts/neon-environment.test.mjs', 'scripts/neon-idle.test.mjs']);
@@ -109,6 +123,7 @@ try {
     case 'test:integration':
       env = testEnvironment(env);
       await go('run', './cmd/migrate', 'up');
+      await go('run', './cmd/migrate', 'up', '--v2');
       await go('test', '-count=1', './...');
       break;
     case 'check:invariants':
@@ -119,6 +134,7 @@ try {
     case 'test:e2e':
       env = testEnvironment(env);
       await go('run', './cmd/migrate', 'up');
+      await go('run', './cmd/migrate', 'up', '--v2');
       mkdirSync(join(root, '.local'), { recursive: true });
       await go('build', '-o', join(root, '.local', windows ? 'api-e2e.exe' : 'api-e2e'), './cmd/server');
       env = { ...env, API_ADDR: '127.0.0.1:18080', ERP_API_PROXY_TARGET: 'http://127.0.0.1:18080' };
@@ -131,7 +147,7 @@ try {
       break;
     case 'serve:test:web':
       env.ERP_API_PROXY_TARGET = 'http://127.0.0.1:18080';
-      await web('dev', '--host', '127.0.0.1', '--port', '5174');
+      await web('dev', '--host', '127.0.0.1', '--port', process.env.E2E_WEB_PORT ?? '5174');
       break;
     default:
       throw new Error('Unknown ERP command. See package.json scripts and README.md.');

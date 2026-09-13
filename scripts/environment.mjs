@@ -6,6 +6,7 @@ import { parseEnv } from 'node:util';
 const allowed = new Set([
   'POSTGRES_PASSWORD', 'DATABASE_URL', 'MIGRATION_DATABASE_URL',
   'TEST_DATABASE_URL', 'API_ADDR', 'ERP_API_PROXY_TARGET',
+  'V2_DATABASE_URL', 'V2_MIGRATION_DATABASE_URL',
 ]);
 
 /** Existing process variables take precedence; connection values are never logged. */
@@ -47,7 +48,8 @@ export function requireValue(env, name) {
 /** UI tooling gets its proxy target, never the backend database credentials. */
 export function browserEnvironment(env) {
   const publicEnv = { ...env };
-  for (const key of ['POSTGRES_PASSWORD', 'DATABASE_URL', 'MIGRATION_DATABASE_URL', 'TEST_DATABASE_URL', 'API_ADDR']) {
+  for (const key of ['POSTGRES_PASSWORD', 'DATABASE_URL', 'MIGRATION_DATABASE_URL', 'TEST_DATABASE_URL', 'API_ADDR',
+    'V2_DATABASE_URL', 'V2_MIGRATION_DATABASE_URL', 'TEST_V2_DATABASE_URL', 'V2_ADMIN_PASSWORD', 'V2_DB_PASSWORD']) {
     delete publicEnv[key];
   }
   for (const key of Object.keys(publicEnv)) if (key.startsWith('NEON_')) delete publicEnv[key];
@@ -68,5 +70,6 @@ export function testEnvironment(env) {
   for (const key of url.searchParams.keys()) {
     if (key !== 'sslmode') throw new Error('Unexpected TEST_DATABASE_URL connection option.');
   }
-  return { ...env, DATABASE_URL: raw, MIGRATION_DATABASE_URL: raw, TEST_DATABASE_URL: raw };
+  return { ...env, DATABASE_URL: raw, MIGRATION_DATABASE_URL: raw, TEST_DATABASE_URL: raw,
+    V2_DATABASE_URL: '', V2_MIGRATION_DATABASE_URL: raw, TEST_V2_DATABASE_URL: '' };
 }

@@ -1,0 +1,14 @@
+V2 UI route map
+/v2/login — isolated login
+/v2/orders — order lifecycle and assigned work session entry
+/v2/sessions — start/end work sessions
+/v2/documents — structured draft, edit, post, reverse, inspection and material forms
+/v2/inventory — inventory, output lots, ledger, reconciliation, trace, audit tabs
+/v2/reference — items, locations, lots, defect reasons, BOM and inspection revisions
+/v2/users — admin account and multi-role management
+
+Published-shape follow-up
+- Document list responses are documented as Document[]; detail dependencies/ledger/output_ledger/audit are rendered defensively because nested row fields are not fully typed in the published shape.
+- Order assigned_user_id is a UUID while /reference does not publish users; the order form therefore accepts a UUID rather than inventing a user selector.
+- Work-session and document source selectors use UUID labels when the backend does not provide display names.
+- Server remains authoritative for role checks, held-order blocking, CSRF, idempotency and ambiguous retry outcomes.

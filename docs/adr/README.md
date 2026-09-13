@@ -2,9 +2,9 @@
 
 작성일: 2026-09-11
 
-[PRD](../PRD.md)는 제품 요구사항, [SSOT](../SSOT.md)는 현재 상세 설계의 기준이다.
+[PRD v2](../PRD.md)는 구현 중인 목표 제품 요구사항, [SSOT v2](../SSOT.md)는 목표 상세 설계의 기준이다. 구현된 v1의 FR/BR/NFR 번호와 의미는 [PRD-V1](../PRD-V1.md), [SSOT-V1](../SSOT-V1.md)을 따른다.
 ADR은 해당 설계를 선택한 배경, 대안, 감수하는 단점과 재검토 조건을 기록한다.
-아래 문서는 기존 합의와 설계에 대한 기록이며 구현·성능 검증이 완료되었다는 의미는 아니다.
+채택 상태와 실제 구현·검증 상태는 구분한다. v1 날짜별 증거는 [PROGRESS](../PROGRESS.md)에 보존하며 전체 v2는 구현 진행 중, 최종 인수 증거 대기다.
 
 ## 결정 목록
 
@@ -15,9 +15,13 @@ ADR은 해당 설계를 선택한 배경, 대안, 감수하는 단점과 재검�
 | [0003](0003-sveltekit-typescript.md) | SvelteKit + TypeScript 프론트엔드 | 채택 | Svelte는 사용자 지정, SvelteKit·TypeScript는 진행 합의된 구성 |
 | [0004](0004-sqlc-pgx-migrations.md) | sqlc + pgx와 SQL 마이그레이션 | 채택 | DB 접근은 사용자 선택, Goose는 기존 설계 기본값 |
 | [0005](0005-neon-postgresql.md) | Neon과 별도 로컬 테스트 DB | 채택 | Neon은 사용자 확정, 연결·테스트 구성은 설계 기본값 |
-| [0006](0006-transaction-consistency.md) | 트랜잭션·행 잠금·중복 요청 방지 | 채택 | PRD NFR-01~03을 위한 기존 설계 기본값 |
-| [0007](0007-bom-snapshot.md) | 생산 지시별 BOM 복사본 | 채택 | PRD BR-07을 위한 기존 설계 기본값 |
+| [0006](0006-transaction-consistency.md) | 트랜잭션·행 잠금·중복 요청 방지 | v1 채택; v2 부분 대체 | PRD-V1 NFR-01~03의 설계 기본값 |
+| [0007](0007-bom-snapshot.md) | 생산 지시별 BOM 복사본 | v1 채택; v2 부분 대체 | PRD-V1 BR-07의 설계 기본값 |
 | [0008](0008-rocky-linux-cicd.md) | Rocky Linux Docker Compose와 GitHub Actions CI/CD | 채택 | 사용자 후속 배포 요청, 보유 서버·도메인 활용 |
+| [0009](0009-factory-production-flow.md) | 현장 자재·검사·재작업·입고 분리 | v2 목표 채택 / 전체 구현 진행·검증 대기 | 사용자 생산 중심 공장 흐름 요청; 0006·0007 부분 대체 |
+
+0001~0008은 v1 결정 이력을 보존한다. 0006의 동시 반영 범위와 0007의 BOM 승인·개정 범위는 v2에서 0009를 따른다.
+0001~0005의 기술 스택은 v2에서도 유지한다. 0008의 과거 Basic Auth 보호 전제는 2026-09-12 사용자 no-proxy-auth 결정으로 대체된다. v1 익명 조회·쓰기 위험은 남으며 v2 개별 계정·세션·역할을 대신하지 않는다. 현재 운영 정책과 미검증 항목은 0008 및 [DEPLOYMENT](../DEPLOYMENT.md), PROGRESS를 따른다.
 
 ## 기록 원칙
 

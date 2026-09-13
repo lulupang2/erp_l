@@ -1,8 +1,56 @@
 # 구현 진행 기록
 
-최종 검증일: **2026-09-11**. 제품 요구사항은 PRD, 결정 배경은 ADR, 구현 규칙은 SSOT를 따른다.
+## 현재 전환 상태 — 공장 생산 흐름 v2 (2026-09-12, 구현·검증 진행 중)
 
-## 현재 판정
+사용자가 특정 공장 없는 소규모 조립공장·생산 중심 범위를 선택했다.
+현재 PRD/SSOT는 목표 v2로 개정했고 기존 문서는 PRD-V1/SSOT-V1로 보존했다.
+ADR-0009와 FACTORY-PLAN에 자재 불출·실제 소비·반납, 검사·재작업·완제품 입고, 역할·정정·데이터 전환을 기록했다.
+**v2 코드·스키마·API 계약·별도 UI의 구현은 진행되었고, 실제 DB 인수 검증과 배포 검증은 아직 완료되지 않았다.** 범위는 준비 단계만이 아니라 F2-01~10 전체다.
+최종 통합 담당자가 실제 변경 계약·마이그레이션·실행 결과를 제공하면 해당 범위에 한해 상태를 갱신한다.
+
+최종 기록된 v1 로컬 회귀 검증일: **2026-09-12**. 실제 v1 Neon 검증 기록일: **2026-09-11**. 이번 문서 정합화에서 재실행하지 않았다. v2 제품 요구사항은 PRD, 결정 배경은 ADR-0009, 목표 구현 규칙은 SSOT를 따른다.
+
+### 문서 정합화와 배포 결정 (2026-09-12)
+
+사용자 결정은 **reverse proxy Basic Auth를 사용하지 않음**이다. v1은 앱 로그인·역할이 없어 공개 접근자가 데이터를 익명 조회·변경할 수 있다. TLS·Host/Origin 검사·loopback 바인딩은 사용자 권한이 아니며 읽기 전용 또는 v2와의 데이터 격리가 이미 구현되었다고 주장하지 않는다. v2 세션·역할·감사는 별도 필수 요구다.
+README·현재 PRD/SSOT·전환 계획·데모·UI·ERD·Neon·계약 안내·소유 ADR의 버전/정책을 정합화했다. v1의 양품7/불량3 완료와 기존 검증 수치·실패·인계 이력을 보존한다. DEMO는 v1 PRD를 참조하며 v2 대표 시연은 별도 목표다.
+상태/역할 전이, 보류 중 입고, 초과 합격 대기, 로그인/작업 세션 및 요청 키 소유권, 정수·합계 한도를 FACTORY-PLAN 7절과 SSOT에 기록했다. 미정 정책은 통합 담당자에게 전달하고 승인 범위 축소나 기능 완료로 처리하지 않는다.
+문서 정합화의 검증은 소유 문서의 로컬 링크·앵커와 의미 대조에 한정한다. 병렬 편집 중 포매터·린터·빌드·프로젝트 테스트·클라우드/DB 명령은 실행하지 않는다. 최종 v2 인수, 배포 지적 수정, production 적용은 별도 실제 증거가 필요하다.
+### v2 통합 증거 (2026-09-12)
+
+- `go -C apps/api test ./...`: 통과. v2 인증·공장 패키지와 기존 v1 회귀 경계가 컴파일·실행됐다. DB가 필요한 v2 통합 테스트는 `TEST_DATABASE_URL`이 없으면 안전하게 건너뛴다.
+- `pnpm test:unit`: 통과. Go 패키지, 프론트 36개, 환경·Neon 안전장치 11개가 통과했다.
+- `pnpm db:generate`, `pnpm check:generated`: 통과. sqlc v1.31.1 생성 결과가 재생성 결과와 동일하다.
+- `pnpm contract:generate`, `pnpm contract:lint`: 통과. v1 경로를 보존한 `/api/v2` 인증·기준정보·지시·세션·전표·재고·원장·감사 계약을 생성했다.
+- `pnpm check`: 오류 0, 경고 13. `pnpm build`: Go/SvelteKit 번들 생성 통과. 남은 경고는 v2 화면의 self-closing `option`과 일부 동적 label 접근성 경고다.
+- 초기 브라우저 확인은 API 없이 로그인 셸만 확인했지만, 이후 실제 API 연결 후 v2 관리자 로그인과 작업 지시 화면을 확인했다. 관리자 계정으로 생산관리·자재·작업자·품질 계정을 만들고 역할별 HTTP 명령을 실행했다.
+- Docker Desktop을 기동해 `pnpm db:up`, `pnpm test:integration`의 v1/v2 migration과 기존 통합 테스트를 통과했다. 이 기존 테스트만으로 B2 전체 인수를 주장하지 않는다. Windows의 5174 포트 바인딩 오류 때문에 `E2E_WEB_PORT=4173`을 지원하도록 변경했고, 해당 설정으로 기존 v1 브라우저 19개와 `pnpm check:invariants`가 통과했다.
+- R2/R3/R4 소스 계약은 반영했지만 Caddy/Actions/실제 health·readiness·rollback 실행은 하지 않았다. Neon·원격 서버·GitHub Actions·production 데이터는 변경하지 않았다.
+- 실제 v2 HTTP 대표 흐름에서 신규 산출 11, 합격 입고 10, 폐기 1, 케이스 소비 11·스위치 소비 882, 반납 1·78, 현장 잔여 0, 작업 종료 후 마감을 확인했다. reconciliation의 inventory/output/lot 불일치 배열은 모두 비어 있었다. 착수 허용량 초과·미검사 수량 초과·현장 자재와 활성 세션이 남은 마감 거절도 확인했다.
+- 실행 중 발견된 v1 catch-all의 v2 차단, 기준정보 kind 라우팅, 문서 확정 시 멱등성 키를 문서 ID로 조회하던 오류를 수정했다. 후속 코드 정리에는 최초 동일 키 실행 직렬화, 역분개된 후속 문서의 의존성 처리, 역분개 생산의 착수 집계 제외, 공장 쓰기 CSRF 검증, 잘못된 자재 행 UUID 처리, 세션 시작 상태 제한을 반영했다.
+- **사용자가 코드 작업 우선·남은 테스트 직접 수행을 지시한 뒤, 남은 테스트를 스킵하고 진행하도록 확정했다.** 자동 테스트와 브라우저 실행을 중단했고 검증 서비스는 종료된 상태다. 마지막 코드 정리 후 `go -C apps/api build ./...` 컴파일만 통과했다. 마지막 수정의 행동 검증, B2-01~14 전체 인수와 대표 흐름·경쟁·실패·역할별 UI·v1 격리의 남은 검증 TODO 16개는 사용자 요청으로 스킵 처리한다. 이는 테스트 통과나 전체 인수 완료를 의미하지 않으며, 위의 기존 실행 증거와 미검증 범위는 그대로 유지한다.
+
+## v1 리뷰 및 검증 이력 (2026-09-12, 후속 결정 이전)
+
+`b53c8356b11a4bcecc787f8e7abf17638a996448`와 시작 시의 Caddyfile 미커밋 변경을 리뷰했다.
+현재 Git에는 MVP와 배포 관련 커밋 3건이 존재하고 Web은 adapter-node를 사용한다.
+아래 과거 기록의 ‘커밋·푸시 미수행’, ‘adapter-auto’ 등은 당시 시점의 설명이다. 이번 작업에서는 커밋·푸시하지 않았다.
+
+- `pnpm check`: Go vet 및 Svelte 검사 통과(오류 0·경고 0).
+- `pnpm test:unit`: Go 테스트, 프론트 36개, 스크립트 11개 통과. 실DB 검증은 다음 명령으로 분리.
+- `pnpm test:integration`: 격리된 erp_test에서 실제 DB 테스트 통과.
+- `pnpm test:e2e`: Chromium 19개 통과(43.3초).
+- `pnpm check:invariants`: 테스트 DB 이력·잔액·집계 대조 통과.
+- `pnpm build`, `pnpm contract:lint`: 통과. adapter-node 빌드를 확인했다.
+
+리뷰 당시에는 **배포 경로의 수정 필요 사항 4건이 미해결**이었다. Basic Auth 주석 처리(P1), 수동 배포 CI 검증 우회(P2), Caddy reload 누락(P2), 15초 DB health 호출(P2)을 [리뷰 문서](CODE-REVIEW-2026-09-12.md)에 기록했다. 이후 Basic Auth 복구 권고는 사용자 결정으로 대체되었으며 보안 수정 완료가 아니다. R2/R3/R4는 실제 후속 구현·검증 증거 전까지 미해결로 둔다.
+코드와 기존 Caddyfile 변경은 보존했다. 원격 서버·Neon·GitHub Actions는 실행하거나 재검증하지 않았으므로 production 완료 여부를 새로 확정하지 않는다.
+
+## 아래 기록의 기준 시점
+
+이하 내용은 2026-09-11 v1 구현 세션의 검증과 후속 작업 이력이다. ‘현재’, ‘다음’과 완료 표기는 해당 시점의 v1에 한정한다. 위의 v1 로컬 회귀 기록도 v2 또는 이번 production 검증으로 간주하지 않는다.
+
+## 당시 v1 판정
 
 **로컬 PostgreSQL MVP 구현·검증 완료. 승인된 Neon 전용 프로젝트의 실제 연결·업무 흐름·유휴 재개 검증 완료.**
 최초 구현은 분리된 로컬 DB로 검증했다. 이후 사용자가 `assembly-erp` 신규 프로젝트 생성을 승인해 2026-09-11 Neon 리소스를 생성했다. 로컬 통과와 실제 Neon 검증은 구분하며 공개 배포는 수행하지 않는다.
@@ -141,7 +189,7 @@ Neon 연동 연결을 안내했다. 연결 후 ERP 전용 프로젝트/DB를 확
 
 최종 근거는 `.local/neon-verification.json`, `.local/neon-resume-verification.json`, `.local/neon-idle-observation.json`, `.local/neon-browser-results.json`, `.local/neon-dev-smoke.json`이다. 로컬 시드의 CASE/KEYBOARD/SWITCH 재고 10/0/800도 별도 조회로 보존을 확인했다. 기존 `ji` 리소스, 공개 배포, 커밋·푸시는 변경하지 않았다.
 
-## 다음 시작 지점
+## 당시 v1 다음 시작 지점
 
 추가 필수 구현 없이 로컬 또는 Neon 데모를 실행할 수 있다. 기능 수정 시에는 현재 변경 상태와 이 문서를 읽고, 일반 통합 테스트는 계속 로컬 전용 DB에서 수행한다. 단일 명령의 완전 무인 Neon 재실행이 필요하면 파일 관측 입력 방식으로 별도 검증하되 실제 새 실행 결과만 기록한다.
 
@@ -235,12 +283,14 @@ API·DB·접속 프로필과 멱등성 로직은 변경하지 않았다. 변경 
 
 타이포그래피 브라우저 검증에 `목록으로` 링크형 버튼의 `inline-flex`, `align-items:center`, 2px 상단 보정 회귀 검사를 추가했다. 백엔드/API/DB 로직은 변경하지 않았다. 집중 검증 결과는 아래 후속 실행 결과로 갱신한다.
 
-### Rocky Linux 배포 문서화 (2026-09-11, 실제 배포 미완료)
+### Rocky Linux 배포 문서화 (2026-09-11, 실제 배포 미완료; 인증 정책은 이후 대체)
+
+> 아래 TLS/Basic Auth 구성, 익명 401·인증 후 200 검증 계획과 Basic Auth 유지 의무는 **당시의 운영 방침을 보존한 역사 기록**이다. 2026-09-12 사용자 결정은 no-proxy-auth이며 이 의무·인수 기준을 대체한다. 과거에 계획한 401을 실제 관측 결과로 간주하지 않으며 v1 익명 조회·쓰기 위험은 남는다. 현재 절차는 [DEPLOYMENT](DEPLOYMENT.md)를 따른다.
 
 사용자가 보유 Rocky Linux 서버와 `erp.jisung.lol` 도메인으로 후속 포트폴리오 배포를 진행하기로 했다. 사용자는 GitHub 저장소/remote, 기존 `deploy` 사용자, Docker 설치와 GitHub Actions repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` 등록까지 완료했다고 확인했다.
 
-배포 기준은 `docs/DEPLOYMENT.md`에 정리했다. 목표 구성은 GitHub Actions CI → commit SHA 기반 API/Web image → GHCR → SSH → Rocky Linux Docker Compose → Caddy TLS/Basic Auth → loopback SvelteKit/Go API → Neon이다. 서버 비밀번호는 CI/CD에 사용하지 않고 SSH key를 사용한다. production DB 비밀값은 GitHub workflow나 저장소에 넣지 않고 서버의 `.env.production`에만 둔다.
+당시 배포 기준은 `docs/DEPLOYMENT.md`에 정리했다. 당시 목표 구성은 GitHub Actions CI → commit SHA 기반 API/Web image → GHCR → SSH → Rocky Linux Docker Compose → Caddy TLS/Basic Auth → loopback SvelteKit/Go API → Neon이었다. 서버 비밀번호는 CI/CD에 사용하지 않고 SSH key를 사용하며 production DB 비밀값은 GitHub workflow나 저장소가 아닌 서버의 `.env.production`에만 둔다는 원칙은 유지한다.
 
-이번 문서 작업에서는 실제 서버 SSH 접속, DNS 변경, 방화벽 변경, GHCR push, production migration, Caddy 기동 또는 `erp.jisung.lol` 외부 확인을 수행하지 않았다. 따라서 **production 배포 상태는 아직 미완료**이며, CI/CD와 서버 배포를 실제 실행한 세션에서 TLS, 인증 없는 401, Basic Auth 후 200, 내부 health, migration과 컨테이너 상태를 검증한 뒤 완료로 갱신해야 한다.
+당시 문서 작업에서는 실제 서버 SSH 접속, DNS 변경, 방화벽 변경, GHCR push, production migration, Caddy 기동 또는 `erp.jisung.lol` 외부 확인을 수행하지 않았다. 따라서 **production 배포 상태는 아직 미완료**다. 당시 계획의 401/Basic Auth 확인은 현재 게이트가 아니며, 사용자 no-proxy-auth 결정에 따라 현재 공개 경로에는 Basic Auth를 요구하지 않는다. 실제 배포와 R2/R3/R4 후속 상태는 [DEPLOYMENT](DEPLOYMENT.md), 코드 리뷰, 통합 담당자의 관측 증거로 갱신한다.
 
-배포 문서는 준비 완료/미완료를 구분하는 체크리스트와 장애 확인 순서, commit SHA 롤백 원칙을 포함한다. 자동 배포에서는 seed/reset/migration down을 실행하지 않으며, 앱 자체 사용자 인증이 없는 동안 Caddy Basic Auth를 제거하지 않는 것을 운영 기준으로 한다.
+배포 문서는 준비 완료/미완료를 구분하는 체크리스트와 장애 확인 순서, commit SHA 롤백 원칙을 포함한다. 자동 배포에서는 seed/reset/migration down을 실행하지 않는다. v1은 앱 사용자 인증이 없으므로 no-proxy-auth 공개 데모의 익명 조회·쓰기 위험을 별도 기록하며, 이를 읽기 전용 보호나 보안 수정 완료로 표현하지 않는다.

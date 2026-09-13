@@ -42,7 +42,10 @@
 </script>
 
 <svelte:head><title>조립 제조 ERP</title></svelte:head>
-<a class="skip-link" href="#main">본문으로 이동</a>
+{#if page.url.pathname.startsWith('/v2')}
+  {@render children()}
+{:else}
+  <a class="skip-link" href="#main">본문으로 이동</a>
 <div class="app-shell" class:sidebar-collapsed={collapsed}>
   <aside class="sidebar">
     <a href="/items" class="brand" aria-label="조립 제조 ERP 홈">
@@ -77,3 +80,4 @@
     <footer class="workspace-footer"><span>ASSEMBLY ERP <span class="footer-separator">·</span> 연결된 기록, 일치하는 수량</span><span>한국어 <span class="footer-separator">/</span> Asia/Seoul</span></footer>
   </div>
 </div>
+{/if}

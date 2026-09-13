@@ -7,13 +7,15 @@ import { browserEnvironment } from './environment.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const api = join(root, 'apps/api');
-const generated = join(api, 'internal/db');
+const generated = ['internal/db', 'internal/v2db', 'internal/v2authdb'].map(path => join(api, path));
 const executable = process.platform === 'win32' ? join(root, '.tools/sqlc-1.31.1/sqlc.exe') : 'sqlc';
 const env = browserEnvironment(process.env);
 function fingerprint() {
-  if (!existsSync(generated)) return '';
-  return readdirSync(generated).filter(name => name.endsWith('.go')).sort().map(name =>
-    `${name}:${createHash('sha256').update(readFileSync(join(generated, name))).digest('hex')}`).join('\n');
+  return generated.map(directory => {
+    if (!existsSync(directory)) return `${directory}:missing`;
+    return readdirSync(directory).filter(name => name.endsWith('.go')).sort().map(name =>
+      `${directory}/${name}:${createHash('sha256').update(readFileSync(join(directory, name))).digest('hex')}`).join('\n');
+  }).join('\n');
 }
 const version = spawnSync(executable, ['version'], { cwd: api, env, encoding: 'utf8', windowsHide: true });
 if (version.status !== 0 || version.stdout.trim() !== 'v1.31.1') {

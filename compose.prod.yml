@@ -16,6 +16,7 @@ services:
     image: "${API_IMAGE:?Set API_IMAGE in .release.env}:${IMAGE_TAG:?Set IMAGE_TAG in .release.env}"
     network_mode: host
     environment:
+      V2_DATABASE_URL: "${V2_DATABASE_URL:-}"
       DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL in .env.production}"
       API_ADDR: "127.0.0.1:8080"
       PUBLIC_APP_HOST: "${PUBLIC_APP_HOST:?Set PUBLIC_APP_HOST in .env.production}"
@@ -45,9 +46,6 @@ services:
   caddy:
     image: caddy:2.11.4-alpine
     network_mode: host
-    environment:
-      BASIC_AUTH_USER: "${BASIC_AUTH_USER:?Set BASIC_AUTH_USER in .env.production}"
-      BASIC_AUTH_HASH: "${BASIC_AUTH_HASH:?Set BASIC_AUTH_HASH in .env.production}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
       - caddy-data:/data

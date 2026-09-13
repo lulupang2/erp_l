@@ -79,14 +79,14 @@ func New(database *store.Store) *fiber.App {
 		if err != nil {
 			hostname = host
 		}
-			if !platform.RequestHostAllowed(hostname, os.Getenv("PUBLIC_APP_HOST")) {
-				return domain.Input("허용된 애플리케이션 호스트에서만 접근할 수 있습니다.")
+		if !platform.RequestHostAllowed(hostname, os.Getenv("PUBLIC_APP_HOST")) {
+			return domain.Input("허용된 애플리케이션 호스트에서만 접근할 수 있습니다.")
 		}
 		if c.Method() == "POST" || c.Method() == "PUT" {
 			if origin := c.Get("Origin"); origin != "" {
 				u, err := url.Parse(origin)
 				if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host != host || u.User != nil {
-						return domain.Input("동일한 애플리케이션 출처의 요청만 허용합니다.")
+					return domain.Input("동일한 애플리케이션 출처의 요청만 허용합니다.")
 				}
 			}
 			if c.Get("Sec-Fetch-Site") == "cross-site" {
@@ -98,10 +98,18 @@ func New(database *store.Store) *fiber.App {
 	items, stock, orders := catalog.New(database), inventory.New(database), production.New(database)
 	api := app.Group("/api/v1")
 	api.Get("/health", wrap(func(ctx context.Context, c fiber.Ctx) (any, int, error) {
+		// Liveness: DB-free process health check (R4)
+		return one(fiber.Map{"status": "ok"}, 200, nil)
+	}))
+	api.Get("/ready", wrap(func(ctx context.Context, c fiber.Ctx) (any, int, error) {
+		// Readiness: DB-dependent check for deployment validation
+		if database == nil || database.Pool == nil {
+			return nil, 503, domain.Unavailable()
+		}
 		if err := database.Pool.Ping(ctx); err != nil {
 			return nil, 503, domain.Unavailable()
 		}
-		return one(fiber.Map{"status": "ok"}, 200, nil)
+		return one(fiber.Map{"status": "ready"}, 200, nil)
 	}))
 	api.Post("/items", wrap(func(ctx context.Context, c fiber.Ctx) (any, int, error) {
 		var in domain.ItemInput
@@ -235,7 +243,6 @@ func New(database *store.Store) *fiber.App {
 		value, err := orders.Result(ctx, id)
 		return one(value, 200, err)
 	}))
-	app.Use(func(c fiber.Ctx) error { return domain.Missing() })
 	return app
 }
 

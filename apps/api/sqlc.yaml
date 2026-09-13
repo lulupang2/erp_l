@@ -25,3 +25,53 @@ sql:
             go_type:
               import: time
               type: Time
+  - engine: postgresql
+    queries: db/v2authqueries
+    schema: db/v2migrations
+    gen:
+      go:
+        package: v2authdb
+        out: internal/v2authdb
+        sql_package: pgx/v5
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: uuid
+            go_type:
+              import: github.com/google/uuid
+              type: UUID
+          - db_type: uuid
+            nullable: true
+            go_type:
+              import: github.com/google/uuid
+              type: UUID
+              pointer: true
+          - db_type: timestamptz
+            go_type:
+              import: time
+              type: Time
+  - engine: postgresql
+    queries: db/v2queries
+    schema: db/v2migrations
+    gen:
+      go:
+        package: v2db
+        out: internal/v2db
+        sql_package: pgx/v5
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        overrides:
+          - db_type: uuid
+            go_type:
+              import: github.com/google/uuid
+              type: UUID
+          - db_type: uuid
+            nullable: true
+            go_type:
+              import: github.com/google/uuid
+              type: UUID
+              pointer: true
+          - db_type: timestamptz
+            go_type:
+              import: time
+              type: Time

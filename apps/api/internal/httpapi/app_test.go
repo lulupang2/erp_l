@@ -80,3 +80,32 @@ func TestInvalidReadQueries(t *testing.T) {
 		}
 	}
 }
+
+func TestHealthEndpointDBFreeLiveness(t *testing.T) {
+	// R4: /api/v1/health must never ping DB; works with nil database
+	app := New(nil)
+	defer app.Shutdown()
+	resp, err := app.Test(httptest.NewRequest("GET", "http://127.0.0.1/api/v1/health", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("health expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestReadyEndpointDBDependent(t *testing.T) {
+	// R4: /api/v1/ready pings DB only when explicitly requested
+	app := New(nil)
+	defer app.Shutdown()
+	resp, err := app.Test(httptest.NewRequest("GET", "http://127.0.0.1/api/v1/ready", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	// With nil database, ping fails; readiness should return 503 (not crash)
+	if resp.StatusCode != 503 {
+		t.Fatalf("ready with nil DB expected 503, got %d", resp.StatusCode)
+	}
+}

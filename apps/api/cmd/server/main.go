@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"example.com/assembly-erp/api/internal/factory"
 	"example.com/assembly-erp/api/internal/httpapi"
 	"example.com/assembly-erp/api/internal/platform"
 	"example.com/assembly-erp/api/internal/store"
@@ -26,6 +27,17 @@ func run() error {
 	}
 	defer pool.Close()
 	app := httpapi.New(store.New(pool))
+	if raw := os.Getenv("V2_DATABASE_URL"); raw != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), platform.OperationTimeout)
+		v2pool, err := platform.OpenV2(ctx, raw)
+		cancel()
+		if err != nil {
+			return err
+		}
+		defer v2pool.Close()
+		service := factory.New(v2pool)
+		factory.Register(app, service, factory.PublicAccess)
+	}
 	shutdown, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	result := make(chan error, 1)
