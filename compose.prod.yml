@@ -1,7 +1,7 @@
 name: assembly-erp-prod
 
 # Rocky Linux deployment intentionally uses host networking. The API and web
-# processes still bind only to loopback; Caddy is the only public listener.
+# processes still bind only to loopback. Host Caddy is the public listener.
 services:
   migrate:
     image: "${API_IMAGE:?Set API_IMAGE in .release.env}:${IMAGE_TAG:?Set IMAGE_TAG in .release.env}"
@@ -51,21 +51,3 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 5
-
-  caddy:
-    image: caddy:2.11.4-alpine
-    network_mode: host
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro,Z
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      api:
-        condition: service_healthy
-      web:
-        condition: service_healthy
-    restart: unless-stopped
-
-volumes:
-  caddy-data:
-  caddy-config:
