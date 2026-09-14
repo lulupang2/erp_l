@@ -4,6 +4,11 @@ import { expect, test, type Page } from '@playwright/test';
 // Inspect rendered styles, not only token declarations. This is a focused text
 // contrast/readability regression check, not a full accessibility certification.
 async function auditText(page: Page) {
+  // A control that enables itself once data arrives (the receipt submit button)
+  // is still mid colour transition when the sample is taken, and an in-between
+  // frame is not the designed pair. Freeze transitions so the audit reads the
+  // settled styles instead of measuring animation frames.
+  await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; }' });
   return page.evaluate(() => {
     type RGBA = [number, number, number, number];
     const rgba = (value: string): RGBA => {
