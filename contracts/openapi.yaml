@@ -2192,8 +2192,19 @@
     "/v2/documents": {
       "get": {
         "operationId": "listV2Documents",
-        "summary": "List immutable factory document heads.",
-        "parameters": [],
+        "summary": "List latest 500 document heads, or all posted documents with remaining output when pending=true.",
+        "parameters": [
+          {
+            "name": "pending",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Return every posted document with a positive pending, accepted, rejected or rework balance, without the history limit."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Authoritative v2 read.",

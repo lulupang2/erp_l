@@ -15,11 +15,12 @@
     { href: '/movements', labelKey: 'navInventoryHistory', icon: 'history' }
   ];
   const factoryNavigation: typeof legacyNavigation = [
-    { href: '/v2/reference', labelKey: 'navReference', icon: 'box', groupKey: 'legacyGroupMaster' },
-    { href: '/v2/orders', labelKey: 'navOrders', icon: 'production', groupKey: 'legacyGroupOperations' },
+    { href: '/v2/work', labelKey: 'navWork', icon: 'production', groupKey: 'legacyGroupOperations' },
+    { href: '/v2/orders', labelKey: 'navOrders', icon: 'production' },
     { href: '/v2/sessions', labelKey: 'navSessions', icon: 'clock' },
     { href: '/v2/documents', labelKey: 'navDocuments', icon: 'layers' },
-    { href: '/v2/inventory', labelKey: 'navFactoryInventory', icon: 'inventory' }
+    { href: '/v2/inventory', labelKey: 'navFactoryInventory', icon: 'inventory' },
+    { href: '/v2/reference', labelKey: 'navReference', icon: 'box', groupKey: 'legacyGroupMaster' }
   ];
   const isFactory = $derived(page.url.pathname.startsWith('/v2'));
   const navigation = $derived(isFactory ? factoryNavigation : legacyNavigation);
@@ -56,7 +57,7 @@
   <a class="skip-link" href="#main">{t('skipMain')}</a>
 <div class="app-shell" class:sidebar-collapsed={collapsed}>
   <aside class="sidebar">
-    <a href={isFactory ? "/v2/orders" : "/items"} class="brand" aria-label={t('appHome')}>
+    <a href={isFactory ? "/v2/work" : "/items"} class="brand" aria-label={t('appHome')}>
       <span class="brand-mark"><Icon name="box" size={27} /></span>
       <span class="brand-wordmark"><strong>assembly<span>erp</span></strong><small>{t('appWorkspace')}</small></span>
     </a>

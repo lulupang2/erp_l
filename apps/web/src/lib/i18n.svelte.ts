@@ -5,6 +5,7 @@ const fallback: Locale = 'ko';
 
 const messages = {
   ko: {
+    navWork: '업무 대기',
     appTitle: '조립 제조 ERP',
     appHome: '조립 제조 ERP 홈',
     appWorkspace: '조립 제조 워크스페이스',
@@ -190,6 +191,7 @@ const messages = {
     actionProcessed: '{action} 요청을 처리했습니다.'
   },
   en: {
+    navWork: 'Work queue',
     appTitle: 'Assembly ERP',
     appHome: 'Assembly ERP home',
     appWorkspace: 'assembly manufacturing workspace',

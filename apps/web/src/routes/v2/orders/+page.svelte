@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
+  import { page } from '$app/state';
+  import OrderFlow from '$lib/v2/OrderFlow.svelte';
   import { Resource, Command, request, can, label, name, quantity, short, publicActor } from '$lib/v2/client.svelte';
   import type { Row, References, Role } from '$lib/v2/client.svelte';
   import Feedback from '$lib/v2/Feedback.svelte';
@@ -45,7 +47,7 @@
   let acknowledgeVariances = $state(false);
   let selectedAction = $state<ActionName | ''>('');
 
-  onMount(() => { void load(); void loadRefs(); });
+  onMount(() => { void load(); void loadRefs(); const id = page.url.searchParams.get('order'); if (id) void select(id); });
   async function load() { await resource.load(() => request<Row[]>('/orders')); orders = resource.value ?? []; }
   async function loadRefs() { await refs.load(() => request<References>('/reference')); references = refs.value; }
   async function select(id: string) {
@@ -146,7 +148,8 @@
 {#if view === 'detail' && detail.loading}<p role="status">{t('loadingOrder')}</p>{:else if view === 'detail' && detail.error}<p class="notice notice-error" role="alert">{detail.error}</p><button class="button secondary" onclick={() => select(selected)}>{t('reload')}</button>{/if}
 {#if view === 'detail' && order && !detail.loading && !detail.error}<section class="card">
   <div class="heading"><div><p class="eyebrow">{t('detailEyebrow')}</p><h2>{name(references?.items, order.finished_item_id)}</h2><p>{t('targetSummary', { target: quantity(order.target_quantity), allowance: quantity(order.start_allowance), date: String(order.planned_date) })}</p></div><span class="status" class:held={order.status === 'held'}>{label(order.status)}</span></div>
-  <div class="notice notice-info"><strong>{t('nextWork')}</strong><p>{order.status === 'draft' ? t('nextDraft') : order.status === 'held' ? t('nextHeld') : ['closed','early_closed','cancelled'].includes(String(order.status)) ? t('nextClosed') : Number(order.pending_quantity) > 0 ? t('nextPending') : Number(order.accepted_quantity) > 0 ? t('nextAccepted') : t('nextDefault')}</p><div class="actions"><a class="button secondary" href="/v2/documents">{t('materialProductionQuality')}</a><a class="button secondary" href="/v2/sessions">{t('shopFloorWork')}</a><a class="button quiet" href="/v2/inventory">{t('inventoryTrace')}</a></div></div>
+  <div class="notice notice-info"><strong>{t('nextWork')}</strong><p>{order.status === 'draft' ? t('nextDraft') : order.status === 'held' ? t('nextHeld') : ['closed','early_closed','cancelled'].includes(String(order.status)) ? t('nextClosed') : Number(order.pending_quantity) > 0 ? t('nextPending') : Number(order.accepted_quantity) > 0 ? t('nextAccepted') : t('nextDefault')}</p><div class="actions"><a class="button secondary" href="/v2/work">업무 대기 목록</a><a class="button quiet" href="/v2/inventory">{t('inventoryTrace')}</a></div></div>
+  <OrderFlow {order} {references} />
   {#if order.status === 'held'}<div class="notice notice-info"><strong>{t('heldTitle')}</strong><p>{t('heldGuide')}</p></div>{/if}
   {#if availableActions().length}
     <form onsubmit={(event) => { event.preventDefault(); void run(); }}>

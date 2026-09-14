@@ -1,3 +1,3 @@
 import { redirect } from '@sveltejs/kit';
 
-export function load() { redirect(307, '/v2/orders'); }
+export function load() { redirect(307, '/v2/work'); }

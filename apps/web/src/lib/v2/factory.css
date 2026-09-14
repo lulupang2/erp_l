@@ -56,3 +56,23 @@
 .factory .page-heading button { flex-shrink: 0; }
 .factory .toolbar .field { gap: 5px; }
 @media (max-width: 600px) { .factory .page-heading { align-items: flex-start; flex-direction: column; } }
+.factory .order-flow { padding: 20px; margin-bottom: 22px; border: 1px solid var(--accent-line); border-radius: 12px; background: var(--surface); }
+.factory .flow-quantities { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.factory .flow-quantities dt { color: var(--muted); font-size: var(--text-sm); }
+.factory .flow-quantities dd { margin: 4px 0; font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.factory .work-queues { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+.factory .work-queues button { flex: 1 1 120px; display: flex; justify-content: space-between; gap: 10px; padding: 14px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface); color: var(--ink); min-height: 48px; }
+.factory .work-queues button.active { background: var(--accent-soft); border-color: var(--accent-text); color: var(--accent-text); box-shadow: inset 0 -3px var(--accent-text); }
+.factory .work-row { display: grid; grid-template-columns: minmax(0, 1fr) 100px auto; align-items: center; gap: 24px; padding: 22px 0; border-bottom: 1px solid var(--line); }
+.factory .work-row:last-child { border-bottom: 0; }
+.factory .work-row p { margin: 5px 0 0; }
+.factory .work-row-quantity { display: flex; flex-direction: column; text-align: right; font-variant-numeric: tabular-nums; }
+.factory .work-row-quantity strong { font-size: 1.5rem; }
+.factory .work-row-quantity span { color: var(--muted); font-size: var(--text-xs); }
+.factory .shop-job { padding: 22px 0; border-top: 1px solid var(--line); margin-top: 18px; }
+@media (max-width: 640px) {
+  .factory .flow-quantities { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .factory .work-row { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  .factory .work-row > .button { grid-column: 1 / -1; }
+  .factory .order-flow { padding: 16px; }
+}

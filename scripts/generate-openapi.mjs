@@ -115,7 +115,7 @@ const v2Paths = {
   '/orders/{id}/{action}': { post: v2Write('actOnV2Order', 'Issue, hold, resume, adjust, close, or cancel a work order.', v2Row, [pathId, { name: 'action', in: 'path', required: true, schema: text(30, 1) }]) },
   '/work-sessions': { get: v2Read('listV2WorkSessions', 'List work sessions.', array(v2Row)), post: v2Write('startV2WorkSession', 'Start one active operator work session.', v2Row) },
   '/work-sessions/{id}/end': { post: v2Write('endV2WorkSession', 'End a work session.', v2Row, [pathId]) },
-  '/documents': { get: v2Read('listV2Documents', 'List immutable factory document heads.', array(v2Row)), post: v2Write('createV2Document', 'Create a draft factory document.', v2Row) },
+  '/documents': { get: v2Read('listV2Documents', 'List latest 500 document heads, or all posted documents with remaining output when pending=true.', array(v2Row), [{ name: 'pending', in: 'query', required: false, schema: { type: 'boolean', default: false }, description: 'Return every posted document with a positive pending, accepted, rejected or rework balance, without the history limit.' }]), post: v2Write('createV2Document', 'Create a draft factory document.', v2Row) },
   '/documents/{id}': { get: v2Read('getV2Document', 'Read a document with dependencies and accounting detail.', v2Row, [pathId]), put: v2Write('updateV2Document', 'Update a draft document only.', v2Row, [pathId]) },
   '/documents/{id}/post': { post: v2Write('postV2Document', 'Post one factory document atomically.', v2Row, [pathId]) },
   '/documents/{id}/reverse': { post: v2Write('reverseV2Document', 'Reverse a posted document when no dependent document remains.', v2Row, [pathId]) },

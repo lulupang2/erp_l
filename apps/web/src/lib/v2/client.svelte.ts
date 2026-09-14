@@ -27,6 +27,10 @@ export async function request<T = Row>(path: string, method = 'GET', body?: unkn
   return envelope.data as T;
 }
 export function errorText(error: unknown) { return error instanceof ApiError ? `${error.message} (${error.code})` : error instanceof Error ? error.message : t('genericRequestFailed'); }
+export async function workDocuments(): Promise<Row[]> {
+  const [recent, pending] = await Promise.all([request<Row[]>('/documents'), request<Row[]>('/documents?pending=true')]);
+  return [...new Map([...recent, ...pending].map(row => [String(row.id), row])).values()];
+}
 
 type PendingCommand = { path: string; method: string; body: unknown; bodyJSON: string; key: string; ownerId: string };
 function cloneBody(body: unknown): unknown { return body === undefined ? undefined : JSON.parse(JSON.stringify(body)); }

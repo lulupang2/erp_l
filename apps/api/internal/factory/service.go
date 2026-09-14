@@ -1120,7 +1120,11 @@ func (s *Service) documents(c fiber.Ctx) error {
 	if e = requireRole(actor, "admin", "planner", "materials", "operator", "quality"); e != nil {
 		return respond(c, e)
 	}
-	rows, e := s.Pool.Query(c.Context(), "SELECT row_to_json(v) FROM v2.document_view v ORDER BY created_at DESC LIMIT 500")
+	query := "SELECT row_to_json(v) FROM v2.document_view v ORDER BY created_at DESC LIMIT 500"
+	if c.Query("pending") == "true" {
+		query = "SELECT row_to_json(v) FROM v2.document_view v WHERE status='posted' AND (available_pending_quantity>0 OR available_accepted_quantity>0 OR available_rejected_quantity>0 OR available_rework_quantity>0) ORDER BY created_at"
+	}
+	rows, e := s.Pool.Query(c.Context(), query)
 	if e != nil {
 		return respond(c, e)
 	}
